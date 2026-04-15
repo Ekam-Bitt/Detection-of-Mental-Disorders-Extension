@@ -41,6 +41,19 @@ _Note: On the first run, it will download the ML model (~500MB) from Hugging Fac
 3.  Click **Load unpacked**.
 4.  Select the `extension` folder from the project directory.
 
+## 🛠️ Development
+
+For local development without Docker, use the `Makefile`:
+
+```bash
+make setup
+source .venv/bin/activate
+```
+
+Python dependencies are managed centrally in `pyproject.toml`, with `dev` and `ml` extras used by local development, CI, and Docker builds.
+
+For detailed instructions on testing, linting, and contribution guidelines, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
 ## 🚀 Features
 
 - **Platform Support**: Specifically optimized for analyzing comments on **YouTube**, **Reddit**, and **X (Twitter)**.

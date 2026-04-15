@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 try:
     import torch
@@ -50,10 +49,10 @@ def load_pipeline(config) -> any:
         return None
 
 
-def apply_top_k(results: List[List[dict]], top_k: int) -> List[List[dict]]:
+def apply_top_k(results: list[list[dict]], top_k: int) -> list[list[dict]]:
     if top_k <= 0:
         return results
-    trimmed: List[List[dict]] = []
+    trimmed: list[list[dict]] = []
     for group in results:
         group_sorted = sorted(group, key=lambda x: x.get("score", 0.0), reverse=True)
         trimmed.append(group_sorted[:top_k])
