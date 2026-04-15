@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install --upgrade pip
-          .venv/bin/pip install -e ".[dev]"
+          .venv/bin/pip install -e ".[dev,ml]"
 
       - name: Run tests with coverage
         env:
