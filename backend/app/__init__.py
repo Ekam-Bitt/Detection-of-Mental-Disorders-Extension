@@ -10,21 +10,26 @@ from .routes import api_bp, register_health
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    CORS(app)
 
-    # Logging
-    logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+    allowed_origins = os.getenv(
+        "ALLOWED_ORIGINS", "chrome-extension://*,moz-extension://*"
+    ).split(",")
+    CORS(app, origins=allowed_origins)
+
+    app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_CONTENT_LENGTH", "1048576"))
+
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     app.logger.setLevel(logging.getLevelName(os.getenv("LOG_LEVEL", "INFO")))
 
-    # Config
     config = AppConfig.from_env()
     app.config.update(config.to_flask_config())
 
-    # Model
     sentiment_pipeline = load_pipeline(config)
     app.config["SENTIMENT_PIPELINE"] = sentiment_pipeline
 
-    # Routes
     app.register_blueprint(api_bp)
     register_health(app)
 

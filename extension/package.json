@@ -6,7 +6,7 @@
   "scripts": {
     "start": "http-server -p 80"
   },
-  "dependencies": {
+  "devDependencies": {
     "http-server": "^14.1.1"
   }
 }

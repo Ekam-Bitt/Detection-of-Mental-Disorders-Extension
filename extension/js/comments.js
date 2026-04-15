@@ -1,15 +1,13 @@
-import { analyzeEmotion } from "./api.js";
-import { state, resetState, addAnalyzedResults, getSummary } from "./state.js";
-import * as ui from "./ui.js";
-import { renderChart } from "./chart.js";
-
-// ... (imports remain the same)
+import { analyzeEmotion } from './api.js';
+import { state, resetState, addAnalyzedResults, getSummary } from './state.js';
+import * as ui from './ui.js';
+import { renderChart } from './chart.js';
 
 export async function extractAndAnalyze() {
   resetState();
   ui.toggleCommentsContainer(false);
   ui.toggleLoadMore(false);
-  ui.showLoader("Extracting comments from page...");
+  ui.showLoader('Extracting comments from page...');
 
   const [tab] = await chrome.tabs.query({
     active: true,
@@ -17,33 +15,48 @@ export async function extractAndAnalyze() {
   });
 
   try {
-    const [{ result: comments }] = await chrome.scripting.executeScript({
+    const results = await chrome.scripting.executeScript({
       target: {
         tabId: tab.id,
+        allFrames: true,
       },
-      files: ["content.js"],
+      files: ['content.js'],
     });
 
-    if (!comments) {
-      throw new Error("No comments returned from script");
+    if (!results || results.length === 0) {
+      throw new Error('No frames returned a result from the script');
     }
+
+    const comments = results.reduce((acc, frame) => {
+      if (Array.isArray(frame.result)) {
+        return acc.concat(frame.result);
+      }
+      return acc;
+    }, []);
 
     state.allExtractedComments = comments;
 
     if (state.allExtractedComments.length === 0) {
-      ui.showLoader("No comments found on this page.");
+      ui.showLoader('No comments found on this page.');
       return;
     }
 
     ui.showLoader(
-      `Found ${state.allExtractedComments.length} comments. Starting analysis...`,
+      `Found ${state.allExtractedComments.length} comments. Starting analysis...`
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Delay for user to read message
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     processNextBatch();
   } catch (error) {
-    console.error("Extraction error:", error);
-    ui.showLoader("Failed to extract comments. <br> " + error.message);
+    console.error('Extraction error:', error);
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'loader';
+    errorDiv.textContent = `Failed to extract comments: ${error.message}`;
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer) {
+      chartContainer.innerHTML = '';
+      chartContainer.appendChild(errorDiv);
+    }
   }
 }
 
@@ -51,12 +64,12 @@ export async function processNextBatch() {
   const startIdx = state.currentBatch * state.BATCH_SIZE;
   const endIdx = Math.min(
     startIdx + state.BATCH_SIZE,
-    state.allExtractedComments.length,
+    state.allExtractedComments.length
   );
   const batchComments = state.allExtractedComments.slice(startIdx, endIdx);
 
   if (batchComments.length === 0) {
-    ui.showLoader("Analysis complete!");
+    ui.showLoader('Analysis complete!');
     setTimeout(() => {
       const summary = getSummary();
       ui.hideLoader();
@@ -69,17 +82,17 @@ export async function processNextBatch() {
   const totalCount = state.allExtractedComments.length;
   const currentCount = Math.min(
     (state.currentBatch + 1) * state.BATCH_SIZE,
-    totalCount,
+    totalCount
   );
   const progress = Math.round((currentCount / totalCount) * 100);
   ui.showLoader(
-    `Analyzing batch ${state.currentBatch + 1}<br>${currentCount}/${totalCount} comments (${progress}%)`,
+    `Analyzing batch ${
+      state.currentBatch + 1
+    }<br>${currentCount}/${totalCount} comments (${progress}%)`
   );
   ui.setLoadMoreState(true);
 
-  const analysisPromises = batchComments.map((comment) =>
-    analyzeEmotion(comment.text),
-  );
+  const analysisPromises = batchComments.map((comment) => analyzeEmotion(comment.text));
   const batchResults = await Promise.all(analysisPromises);
 
   const resultsWithIndex = batchResults.map((result, i) => ({
@@ -94,9 +107,7 @@ export async function processNextBatch() {
   renderChart(summary);
 
   // Trigger a click on the active filter to re-render the results
-  document
-    .querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`)
-    .click();
+  document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`).click();
 
   ui.setLoadMoreState(false);
 
@@ -105,7 +116,7 @@ export async function processNextBatch() {
     ui.toggleLoadMore(true, remaining);
   } else {
     ui.toggleLoadMore(false);
-    ui.showLoader("Analysis complete!");
+    ui.showLoader('Analysis complete!');
     setTimeout(() => {
       ui.hideLoader();
       renderChart(summary);

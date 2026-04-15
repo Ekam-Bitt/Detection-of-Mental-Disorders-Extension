@@ -1,54 +1,39 @@
-let chartInstance;
+import { LABELS, LABEL_ORDER } from '../config.js';
+
+let chartInstance = null;
 
 export function renderChart(summary) {
-  const chartContainer = document.querySelector(".chart-container");
+  const chartContainer = document.querySelector('.chart-container');
   if (!chartContainer) return;
-  chartContainer.innerHTML = '<canvas id="sentimentChart"></canvas>';
-  const ctx = document.getElementById("sentimentChart").getContext("2d");
+
+  const existingCanvas = document.getElementById('sentimentChart');
+  if (existingCanvas) {
+    existingCanvas.remove();
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'sentimentChart';
+  chartContainer.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
 
   if (chartInstance) {
     chartInstance.destroy();
+    chartInstance = null;
   }
 
-  // Build labels and data for the 7 classes expected from the model
-  const LABEL_ORDER = [
-    "LABEL_0", // ADHD
-    "LABEL_1", // Anxiety
-    "LABEL_2", // Autism
-    "LABEL_3", // BPD
-    "LABEL_4", // Depression
-    "LABEL_5", // PTSD
-    "LABEL_6", // Normal
-  ];
-  const LABEL_NAMES = [
-    "ADHD",
-    "Anxiety",
-    "Autism",
-    "BPD",
-    "Depression",
-    "PTSD",
-    "Normal",
-  ];
-  const COLORS = [
-    "#6EE7B7",
-    "#60A5FA",
-    "#F59E0B",
-    "#A78BFA",
-    "#F9737A",
-    "#34D399",
-    "#9CA3AF",
-  ];
-
-  const data = LABEL_ORDER.map((l) => summary[l] || 0);
+  const labelNames = LABEL_ORDER.map((label) => LABELS[label].name);
+  const colors = LABEL_ORDER.map((label) => LABELS[label].color);
+  const data = LABEL_ORDER.map((label) => summary[label] || 0);
 
   chartInstance = new Chart(ctx, {
-    type: "pie",
+    type: 'pie',
     data: {
-      labels: LABEL_NAMES,
+      labels: labelNames,
       datasets: [
         {
           data,
-          backgroundColor: COLORS,
+          backgroundColor: colors,
           borderWidth: 0,
         },
       ],
@@ -58,7 +43,7 @@ export function renderChart(summary) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: "bottom",
+          position: 'bottom',
           labels: {
             font: {
               size: 12,

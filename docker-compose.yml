@@ -9,7 +9,7 @@ services:
       - MODEL_ID=ekam28/emotion-detector
       - HF_HOME=/app/model_cache
     volumes:
-      - ./backend:/app
+      - model_cache:/app/model_cache
     networks:
       - mental-health-net
     restart: unless-stopped
@@ -17,3 +17,6 @@ services:
 networks:
   mental-health-net:
     driver: bridge
+
+volumes:
+  model_cache:

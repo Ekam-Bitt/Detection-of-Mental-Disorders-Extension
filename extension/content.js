@@ -1,55 +1,52 @@
+import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
+
 (async () => {
-  const MAX_LEN = 1000; // safety; adjust as needed
-  const TIMEOUT = 10000; // 10 seconds timeout
+  const TIMEOUT = 10000;
 
   function normalizeElements(elements, source) {
     return Array.from(elements)
       .map((el, index) => ({
-        text: (el.innerText || "").trim(),
+        text: (el.innerText || '').trim(),
         originalIndex: index,
         source,
       }))
       .filter((item) => item.text && item.text.trim().split(/\s+/).length >= 15)
       .map((item) => ({
         ...item,
-        text: item.text.slice(0, MAX_LEN),
+        text: item.text.slice(0, MAX_COMMENT_LENGTH),
       }));
   }
 
   // ---------- Selectors ----------
   const REDDIT_SELECTORS = [
     "div[data-testid='comment'] p", // New Reddit (user provided)
-    "shreddit-comment-body", // Modern Reddit Shadow DOM
-    ".Post ._292iotee39Lmt0MkQZ2hPV", // Old New Reddit (?)
+    'shreddit-comment-body', // Modern Reddit Shadow DOM
+    '.Post ._292iotee39Lmt0MkQZ2hPV', // Old New Reddit (?)
     "div[data-testid='post-container'] p", // Post body
     "div[id$='-post-rtjson-content']", // Target container to group paragraphs
     "div[class*='text-neutral-content']", // Target container to group paragraphs
   ];
 
   const YOUTUBE_SELECTORS = [
-    "ytd-comment-thread-renderer #content-text",
-    "ytd-comment-thread-renderer ytd-comment-renderer #content-text",
-    "ytd-comment-view-model #content-text",
+    'ytd-comment-thread-renderer #content-text',
+    'ytd-comment-thread-renderer ytd-comment-renderer #content-text',
+    'ytd-comment-view-model #content-text',
   ];
 
-  const X_SELECTORS = [
-    "article div[data-testid='tweetText']",
-    "article div[lang]",
-  ];
+  const X_SELECTORS = ["article div[data-testid='tweetText']", 'article div[lang]'];
 
   function getSelectors(host) {
-    if (host.includes("youtube.com")) return YOUTUBE_SELECTORS;
-    if (host.includes("reddit.com")) return REDDIT_SELECTORS;
-    if (host.includes("x.com") || host.includes("twitter.com"))
-      return X_SELECTORS;
+    if (host.includes('youtube.com')) return YOUTUBE_SELECTORS;
+    if (host.includes('reddit.com')) return REDDIT_SELECTORS;
+    if (host.includes('x.com') || host.includes('twitter.com')) return X_SELECTORS;
     return [];
   }
 
   function getSource(host) {
-    if (host.includes("youtube.com")) return "youtube";
-    if (host.includes("reddit.com")) return "reddit";
-    if (host.includes("x.com") || host.includes("twitter.com")) return "x";
-    return "unknown";
+    if (host.includes('youtube.com')) return 'youtube';
+    if (host.includes('reddit.com')) return 'reddit';
+    if (host.includes('x.com') || host.includes('twitter.com')) return 'x';
+    return 'unknown';
   }
 
   // ---------- Async Waiter ----------
@@ -92,9 +89,18 @@
 
   // ---------- Main Execution ----------
   const host = window.location.hostname;
+
+  const isSupported = SUPPORTED_DOMAINS.some((domain) => host.includes(domain));
+
+  if (!isSupported) {
+    console.warn(`Mental Disorder Detector: ${host} is not a supported domain`);
+    return [];
+  }
+
   const selectors = getSelectors(host);
 
   if (selectors.length === 0) {
+    console.warn(`Mental Disorder Detector: No selectors found for ${host}`);
     return [];
   }
 

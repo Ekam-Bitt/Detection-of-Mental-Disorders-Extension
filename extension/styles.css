@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap');
 
 :root {
   --background: #ffffff;
@@ -26,8 +26,8 @@
   --chart-4: #dc2626;
   --chart-5: #6366f1;
   --radius: 0.5rem;
-  --font-sans: "DM Sans", sans-serif;
-  --font-serif: "Space Grotesk", sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-serif: 'Space Grotesk', sans-serif;
 }
 
 .dark {
@@ -164,18 +164,6 @@ h1 {
   border-left: 5px solid;
 }
 
-.positive-comment {
-  border-color: var(--chart-2);
-}
-
-.negative-comment {
-  border-color: var(--chart-4);
-}
-
-.neutral-comment {
-  border-color: var(--chart-3);
-}
-
 .sentiment-bar {
   height: 6px;
   background-color: var(--muted);
@@ -189,18 +177,6 @@ h1 {
   border-radius: calc(var(--radius) - 4px);
 }
 
-.positive-fill {
-  background-color: var(--chart-2);
-}
-
-.negative-fill {
-  background-color: var(--chart-4);
-}
-
-.neutral-fill {
-  background-color: var(--chart-3);
-}
-
 .top-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -209,18 +185,6 @@ h1 {
   font-weight: 600;
   margin-top: 10px;
   color: white;
-}
-
-.top-positive {
-  background-color: var(--chart-2);
-}
-
-.top-negative {
-  background-color: var(--chart-4);
-}
-
-.top-neutral {
-  background-color: var(--chart-3);
 }
 
 .summary {
@@ -299,15 +263,15 @@ h1 {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-.filter-btn[data-filter="positive"].active {
+.filter-btn[data-filter='positive'].active {
   background-color: var(--chart-2);
 }
 
-.filter-btn[data-filter="negative"].active {
+.filter-btn[data-filter='negative'].active {
   background-color: var(--chart-4);
 }
 
-.filter-btn[data-filter="neutral"].active {
+.filter-btn[data-filter='neutral'].active {
   background-color: var(--chart-3);
 }
 

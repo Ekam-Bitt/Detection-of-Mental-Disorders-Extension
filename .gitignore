@@ -1,13 +1,75 @@
-node_modules/
+# Python
 __pycache__/
-*.pyc
-.env
-.DS_Store
-dist/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+
+# IDEs
 .vscode/
 .idea/
-venv/
-env/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Local development
+.env
+.env.local
+.env.development
+*.local
+
+# Docker
+docker-compose.override.yml
+
+# Model cache
+backend/app/model_cache/
 backend/model_files/
+*.bin
+*.pt
+*.pth
 *.safetensors
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log

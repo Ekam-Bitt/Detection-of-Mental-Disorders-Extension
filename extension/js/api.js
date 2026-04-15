@@ -1,17 +1,33 @@
-export const analyzeEmotion = (text) => {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { action: "analyze", text: [text] },
-      (response) => {
-        let predictions = [];
-        if (response && response.emotions) {
-          // API response structure can be inconsistent
-          predictions = Array.isArray(response.emotions[0])
-            ? response.emotions[0]
-            : response.emotions;
-        }
-        resolve({ text, predictions });
-      },
-    );
-  });
-};
+import { DEFAULT_API_BASE_URL, API_TIMEOUT } from '../config.js';
+
+export async function analyzeEmotion(text) {
+  try {
+    const storageResult = await chrome.storage.sync.get(['apiBaseUrl']);
+    const baseUrl = storageResult.apiBaseUrl || DEFAULT_API_BASE_URL;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments: [text] }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const predictions = data.results?.[0] || [];
+
+    return { text, predictions };
+  } catch (error) {
+    console.error('Analysis error:', error);
+    throw error;
+  }
+}

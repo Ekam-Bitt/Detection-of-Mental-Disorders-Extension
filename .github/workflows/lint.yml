@@ -10,28 +10,36 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Set up Python 3.10
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Install dependencies
+      - name: Install Python lint dependencies
         run: |
           python -m pip install --upgrade pip
           pip install flake8 black
-      - name: Lint with flake8
+      - name: Lint with flake8 (errors only)
+        working-directory: backend
         run: |
-          # stop the build if there are Python syntax errors or undefined names
+          # Fail on syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --statistics
+      - name: Lint with flake8 (warnings)
+        working-directory: backend
+        run: |
+          # Report all warnings but do not fail the build
+          flake8 . --count --exit-zero --statistics
       - name: Check formatting with black
+        working-directory: backend
         run: |
           black --check .
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Install Prettier
+        working-directory: extension
+        run: npm install --save-dev prettier
       - name: Check formatting with Prettier
-        run: |
-          npx prettier . --check
+        working-directory: extension
+        run: npx prettier . --check
