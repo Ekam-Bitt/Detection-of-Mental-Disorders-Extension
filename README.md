@@ -1,10 +1,10 @@
-# Detection of Mental Disorders
+# Mental Health Signal Analysis
 
 ![GitHub Release](https://img.shields.io/github/v/release/Ekam-Bitt/Detection-of-Mental-Disorders-Extension)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/docker-build.yml?label=build)
 ![GitHub License](https://img.shields.io/github/license/Ekam-Bitt/Detection-of-Mental-Disorders-Extension)
 
-A privacy-focused browser extension that analyzes text content on web pages to detect emotional states and potential mental health indicators. Powered by a custom fine-tuned RoBERTa model.
+A privacy-focused browser extension and local API for surfacing mental-health-related language signals in public social-media text. Version 2.0 upgrades the project from a single-label classifier into a multi-source signal-analysis system with severity, uncertainty, and evidence summaries.
 
 ## 📥 Getting Started
 
@@ -52,47 +52,70 @@ source .venv/bin/activate
 
 Python dependencies are managed centrally in `pyproject.toml`, with `dev` and `ml` extras used by local development, CI, and Docker builds.
 
+For research and dataset tooling:
+
+```bash
+make install-research
+```
+
 For detailed instructions on testing, linting, and contribution guidelines, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## 🚀 Features
 
-- **Platform Support**: Specifically optimized for analyzing comments on **YouTube**, **Reddit**, and **X (Twitter)**.
-- **Privacy First**: All analysis is done via a secure backend API; no data is stored permanently.
-- **7 Emotion Categories**: Detects ADHD, Anxiety, Autism, BPD, Depression, PTSD, and Normal/Neutral states.
-- **Visual Insights**: Displays a breakdown of detected emotions in a clean, easy-to-read chart.
+- **Platform Support**: Extracts visible comments from **YouTube**, **Reddit**, and **X**.
+- **Privacy First**: Runs through a local API; no cloud inference is required.
+- **Signal-Based Output**: Reports language signals, severity, confidence, uncertainty, and evidence comments.
+- **Research Toolkit**: Includes reproducible dataset preparation, split validation, evaluation, and ONNX export utilities.
 
 ## 🛠️ Tech Stack
 
 - **Frontend (Extension)**: HTML, CSS, JavaScript (Manifest V3)
 - **Backend (API)**: Python, Flask, Gunicorn
-- **ML Model**: RoBERTa (Fine-tuned), hosted on [Hugging Face](https://huggingface.co/ekam28/emotion-detector)
+- **ML Models**:
+  - v1 compatibility model: fine-tuned RoBERTa on Hugging Face
+  - v2 serving path: multi-label student model exported to ONNX
+  - v2 research teacher: `microsoft/deberta-v3-base`
 - **Infrastructure**: Docker, Docker Compose
 
 ## 🖥️ Usage
 
 1.  Navigate to a **YouTube** video, **Reddit** thread, or **X (Twitter)** post with comments.
-2.  Click the **Detection of Mental Disorders** icon in your browser toolbar.
-3.  The extension will analyze the visible text and display a pie chart of the detected emotions.
+2.  Click the **Mental Health Signal Analysis** icon in your browser toolbar.
+3.  The extension will analyze visible comments and display:
+    - page-level signal prevalence
+    - severity and uncertainty
+    - evidence comments for the strongest signals
 
-## 🧠 Model Details
+## 🧠 v2 Signal Taxonomy
 
-The core of this project is a custom fine-tuned RoBERTa model trained to classify text into the following categories:
+The v2 system uses a safer label space focused on text signals rather than diagnosis:
 
-| Label     | Condition                             |
-| :-------- | :------------------------------------ |
-| `LABEL_0` | ADHD                                  |
-| `LABEL_1` | Anxiety                               |
-| `LABEL_2` | Autism                                |
-| `LABEL_3` | BPD (Borderline Personality Disorder) |
-| `LABEL_4` | Depression                            |
-| `LABEL_5` | PTSD                                  |
-| `LABEL_6` | Normal                                |
+- `attention_dysregulation`
+- `anxious_affect`
+- `autistic_trait_discussion`
+- `emotional_instability`
+- `depressive_affect`
+- `trauma_stress`
+- `crisis_self_harm`
+- `no_clear_signal`
 
-You can view the model directly on Hugging Face: [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
+## 🔬 Research Workflow
+
+The repository now includes reproducible scripts for the v2 dataset and evaluation pipeline:
+
+```bash
+make prepare-weak-labels ARGS="--input raw.csv --source-platform reddit --output research/datasets/reddit_weak.jsonl"
+make sample-annotation-set ARGS="--input research/datasets/reddit_weak.jsonl --output research/datasets/annotation_batch.jsonl --sample-size 250"
+make build-final-dataset ARGS="--input research/datasets/annotated.jsonl --output research/datasets/final_dataset.jsonl --cross-platform-holdout youtube"
+make validate-splits ARGS="--input research/datasets/final_dataset.jsonl"
+make export-student-onnx ARGS="--model path/to/student-checkpoint --output-dir backend/models/student-onnx"
+```
+
+Experiment configs live in [research/configs](./research/configs), and project artifacts live in [docs/v2](./docs/v2).
 
 ## ⚠️ Disclaimer
 
-This tool is for **educational and informational purposes only**. It is **NOT** a diagnostic tool and should not be used to diagnose mental health conditions. The results are based on statistical patterns in text and may not reflect the actual mental state of an individual.
+This tool is for **educational and informational purposes only**. It is **NOT** a diagnostic system and should not be used to diagnose mental health conditions. The results summarize patterns in text, not the mental state of a person.
 
 ## 📄 License
 

@@ -1,4 +1,4 @@
-.PHONY: help setup install-backend install-extension install-dev run-backend run-extension test-backend lint-backend lint-extension lint format format-backend format-extension clean docker-up docker-down
+.PHONY: help setup install-backend install-extension install-dev install-research run-backend run-extension test-backend lint-backend lint-extension lint format format-backend format-extension clean docker-up docker-down prepare-weak-labels sample-annotation-set build-final-dataset validate-splits evaluate-v2 export-student-onnx
 
 PYTHON_BIN := $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 PIP_BIN := $(shell if [ -x .venv/bin/pip ]; then echo .venv/bin/pip; else echo pip; fi)
@@ -45,6 +45,9 @@ install-dev: install-extension ## Install all dependencies
 	else \
 		echo "⚠ pre-commit not found after pip install, skipping hook installation"; \
 	fi
+
+install-research: ## Install research dependencies and experiment tooling
+	$(PIP_BIN) install -e ".[dev,ml,research]"
 
 run-backend: ## Run backend server locally
 	cd backend && $(PYTHON_BIN) -m flask --app wsgi:app run --port 8000 --debug
@@ -93,3 +96,21 @@ docker-logs: ## View Docker logs
 
 health: ## Check backend health
 	curl http://localhost:8000/health
+
+prepare-weak-labels: ## Convert raw CSV data into v2 weak-label JSONL
+	$(PYTHON_BIN) -m scripts.prepare_weak_labels $(ARGS)
+
+sample-annotation-set: ## Sample a v2 annotation batch from prepared JSONL
+	$(PYTHON_BIN) -m scripts.sample_annotation_set $(ARGS)
+
+build-final-dataset: ## Build the final v2 dataset splits
+	$(PYTHON_BIN) -m scripts.build_final_dataset $(ARGS)
+
+validate-splits: ## Validate leakage and class balance for a v2 dataset
+	$(PYTHON_BIN) -m scripts.validate_splits $(ARGS)
+
+evaluate-v2: ## Evaluate a v2 predictions JSON file
+	$(PYTHON_BIN) -m scripts.evaluate_v2 $(ARGS)
+
+export-student-onnx: ## Export and quantize a distilled student model
+	$(PYTHON_BIN) -m scripts.export_student_onnx $(ARGS)

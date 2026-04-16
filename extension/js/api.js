@@ -2,14 +2,14 @@ import { DEFAULT_API_BASE_URL, API_TIMEOUT } from '../config.js';
 
 export async function analyzeComments(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
-    return [];
+    return null;
   }
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    const response = await fetch(`${DEFAULT_API_BASE_URL}/api/analyze`, {
+    const response = await fetch(`${DEFAULT_API_BASE_URL}/api/v2/analyze/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ comments }),
@@ -24,7 +24,7 @@ export async function analyzeComments(comments) {
     }
 
     const data = await response.json();
-    return data.results || [];
+    return data;
   } catch (error) {
     console.error('Analysis error:', error);
     throw error;

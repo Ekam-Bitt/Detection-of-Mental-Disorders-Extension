@@ -35,7 +35,9 @@ The project uses a `Makefile` to simplify common development tasks. Run `make he
 
 ### Backend Development
 
-For backend changes, we use **Ruff** for linting and formatting.
+For backend changes, we use **Ruff** for linting and formatting. The backend now has two tracks:
+- product serving for the browser extension
+- research tooling for dataset prep, evaluation, and export
 
 | Task        | Command               | Description                              |
 | ----------- | --------------------- | ---------------------------------------- |
@@ -44,6 +46,25 @@ For backend changes, we use **Ruff** for linting and formatting.
 | **Format**  | `make format-backend` | Auto-format code with Ruff               |
 | **Test**    | `make test-backend`   | Run backend tests with pytest            |
 | **Cleanup** | `make clean`          | Remove caches and model artifacts        |
+
+### Research / Dataset Workflow
+
+Install the extra research stack when you need data preparation, evaluation, or model export:
+
+```bash
+make install-research
+```
+
+Key commands:
+
+| Task | Command | Description |
+| ---- | ------- | ----------- |
+| Weak labels | `make prepare-weak-labels ARGS="..."` | Convert raw CSV into v2 weak-label JSONL |
+| Annotation sample | `make sample-annotation-set ARGS="..."` | Create a balanced annotation batch |
+| Final dataset | `make build-final-dataset ARGS="..."` | Assign train, validation, test, and cross-platform splits |
+| Split validation | `make validate-splits ARGS="..."` | Check leakage and class balance |
+| Evaluation | `make evaluate-v2 ARGS="..."` | Compute signal, severity, and calibration metrics |
+| ONNX export | `make export-student-onnx ARGS="..."` | Export and quantize a student model |
 
 ### Extension Development
 
@@ -75,6 +96,11 @@ make test-backend
 make test-backend-cov
 ```
 
+The v2 test suite now covers:
+- `/api/v2/analyze/comments`
+- dataset split integrity helpers
+- v2 configuration defaults
+
 ---
 
 ## ⚙️ Configuration
@@ -85,10 +111,12 @@ The `make setup` command creates a `.env` file with these defaults:
 
 | Variable     | Default                     | Description                  |
 | ------------ | --------------------------- | ---------------------------- |
-| `MODEL_ID`   | `ekam28/emotion-detector`   | Hugging Face model ID        |
-| `HF_HOME`    | `./backend/app/model_cache` | Model cache directory        |
-| `LOG_LEVEL`  | `DEBUG`                     | Logging level                |
-| `PYTHONPATH` | `./backend`                 | Required for local execution |
+| `MODEL_ID` | `ekam28/emotion-detector` | Legacy compatibility model |
+| `V2_MODEL_ID` | `ekam28/emotion-detector` | v2 HF model path if not using ONNX |
+| `ONNX_MODEL_PATH` | `` | Directory containing `model.onnx` and tokenizer files |
+| `HF_HOME` | `./backend/app/model_cache` | Model cache directory |
+| `LOG_LEVEL` | `DEBUG` | Logging level |
+| `PYTHONPATH` | `./backend` | Required for local execution |
 
 ### Git Hooks
 
@@ -108,12 +136,17 @@ pre-commit run --all-files
 .
 ├── backend/               # Python Flask API
 │   ├── app/               # Core application logic
+│   │   ├── research/      # Dataset, evaluation, and export helpers
+│   │   └── v2/            # v2 taxonomy, aggregation, and inference
+│   ├── scripts/           # CLI entry points for dataset and model tooling
 │   ├── tests/             # Pytest suite
 │   ├── Dockerfile         # Container config
 │   └── wsgi.py            # WSGI entrypoint
+├── docs/v2/               # Dataset/model cards and safety docs
 ├── extension/             # Browser extension code
 ├── Makefile               # Task automation
 ├── pyproject.toml         # Python packaging, dependencies, and tool configuration
+├── research/              # Experiment configs and manifests
 ├── docker-compose.yml     # Orchestration
 └── README.md              # Project overview
 ```

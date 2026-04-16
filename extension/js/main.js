@@ -1,40 +1,26 @@
 import * as ui from './ui.js';
-import { extractAndAnalyze, processNextBatch } from './comments.js';
-import { state } from './state.js';
+import { extractAndAnalyze } from './comments.js';
+import { getFilteredComments, state } from './state.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Filter buttons
-  document.querySelectorAll('.filter-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      const filter = button.dataset.filter;
-      state.activeFilter = filter;
-      ui.setActiveFilter(filter);
-      ui.toggleCommentsContainer(true);
-
-      let filteredResults = [];
-      if (filter === 'all') {
-        filteredResults = [...state.analyzedResults].sort(
-          (a, b) => a.originalIndex - b.originalIndex
-        );
-      } else {
-        filteredResults = state.analyzedResults
-          .filter((item) => item?.predictions?.some((p) => p.label === filter))
-          .sort((a, b) => {
-            const aScore = a.predictions.find((p) => p.label === filter)?.score || 0;
-            const bScore = b.predictions.find((p) => p.label === filter)?.score || 0;
-            return bScore - aScore;
-          });
-      }
-      ui.displayResults(filteredResults, state.topComments, filter);
-    });
-  });
+  ui.renderFilters();
+  ui.setActiveFilter(state.activeFilter);
 
   document.getElementById('analyze').addEventListener('click', () => {
-    ui.showResultsContainers();
     extractAndAnalyze();
   });
 
-  document.getElementById('loadMore').addEventListener('click', processNextBatch);
+  document.querySelector('.filter-container')?.addEventListener('click', (event) => {
+    const button = event.target.closest('.filter-btn');
+    if (!button) return;
+    const filter = button.dataset.filter;
+    state.activeFilter = filter;
+    ui.setActiveFilter(filter);
+    ui.renderComments(getFilteredComments(filter), filter);
+  });
 
-  ui.setActiveFilter(state.activeFilter);
+  ui.updateStatus(
+    'Analyze a supported page to see signal summaries, severity, and evidence.',
+    'default'
+  );
 });

@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Detection of Mental Disorders</title>
+    <title>Mental Health Signal Analysis</title>
     <script src="libs/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,66 +13,49 @@
   </head>
   <body>
     <header>
-      <h1>Detection of Mental Disorders</h1>
+      <h1>Mental Health Signal Analysis</h1>
       <div class="subtitle">
-        Analyze visible social comments with your local model API
+        Analyze visible social comments with your local private model API
       </div>
     </header>
 
-    <button id="analyze" class="analyze-btn">Analyze Comments</button>
+    <button id="analyze" class="analyze-btn">Analyze Visible Comments</button>
 
-    <div class="summary seven-summary hidden" id="summaryContainer">
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_0">0</div>
-        <div class="summary-label">ADHD</div>
+    <section class="status-card" id="statusCard" data-tone="default">
+      <div class="status-heading">Run Status</div>
+      <div id="statusText" class="status-text">
+        Analyze a supported page to see signal summaries, severity, and evidence.
       </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_1">0</div>
-        <div class="summary-label">Anxiety</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_2">0</div>
-        <div class="summary-label">Autism</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_3">0</div>
-        <div class="summary-label">BPD</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_4">0</div>
-        <div class="summary-label">Depression</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_5">0</div>
-        <div class="summary-label">PTSD</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_6">0</div>
-        <div class="summary-label">Normal</div>
-      </div>
-    </div>
+      <div id="runMeta" class="run-meta"></div>
+    </section>
 
-    <div class="chart-container hidden">
-      <canvas id="sentimentChart"></canvas>
-    </div>
+    <div id="resultsShell" class="results-shell hidden">
+      <section class="summary hidden" id="summaryContainer">
+        <div class="metric-card">
+          <div class="metric-number" id="metricComments">0</div>
+          <div class="metric-label">Comments</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-number" id="metricConfidence">0%</div>
+          <div class="metric-label">Avg Confidence</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-number" id="metricUncertainty">unknown</div>
+          <div class="metric-label">Uncertainty</div>
+        </div>
+      </section>
 
-    <div class="filter-container hidden">
-      <button class="filter-btn" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="LABEL_0">ADHD</button>
-      <button class="filter-btn" data-filter="LABEL_1">Anxiety</button>
-      <button class="filter-btn" data-filter="LABEL_2">Autism</button>
-      <button class="filter-btn" data-filter="LABEL_3">BPD</button>
-      <button class="filter-btn" data-filter="LABEL_4">Depression</button>
-      <button class="filter-btn" data-filter="LABEL_5">PTSD</button>
-      <button class="filter-btn" data-filter="LABEL_6">Normal</button>
-    </div>
+      <section class="signal-summary" id="signalSummary"></section>
 
-    <div id="loadMoreContainer" class="load-more-container hidden">
-      <button id="loadMore" class="load-more-btn">Load More Comments</button>
-    </div>
+      <div class="chart-container hidden"></div>
 
-    <div id="commentsContainer" class="comments-container hidden">
-      <!-- Comments will be displayed here when a filter is selected -->
+      <div class="filter-container hidden"></div>
+
+      <section id="evidenceContainer" class="evidence-container hidden"></section>
+
+      <div id="commentsContainer" class="comments-container hidden"></div>
+
+      <div id="disclaimer" class="disclaimer"></div>
     </div>
 
     <script type="module" src="js/main.js"></script>

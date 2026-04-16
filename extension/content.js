@@ -10,6 +10,7 @@
 
   function normalizeElements(elements, source) {
     const seen = new Set();
+    const threadId = window.location.pathname;
 
     return Array.from(elements)
       .map((el) => normalizeText(el.innerText || el.textContent || ''))
@@ -25,7 +26,9 @@
       .map((text, index) => ({
         text,
         originalIndex: index,
-        source,
+        source_platform: source,
+        thread_id: threadId,
+        post_id: `${source}-${threadId}-${index}`,
       }));
   }
 
