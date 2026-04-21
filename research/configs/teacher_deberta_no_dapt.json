@@ -1,0 +1,17 @@
+{
+  "name": "teacher_deberta_no_dapt",
+  "stage": "supervised_finetune",
+  "model_name": "microsoft/deberta-v3-base",
+  "task": "multi_task_multilabel",
+  "max_length": 256,
+  "batch_size": 12,
+  "learning_rate": 1.5e-05,
+  "num_train_epochs": 4,
+  "early_stopping_metric": "macro_f1",
+  "seed": 42,
+  "dataset_path": "research/datasets/final_dataset.jsonl",
+  "severity_loss": "cross_entropy",
+  "signal_loss": "weighted_bce",
+  "enable_dapt": false,
+  "mlflow_experiment": "mental-health-v2"
+}

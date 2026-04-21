@@ -1,0 +1,15 @@
+{
+  "name": "student_distillation",
+  "stage": "distillation",
+  "teacher_model_name": "microsoft/deberta-v3-base",
+  "student_model_name": "distilroberta-base",
+  "task": "multi_task_multilabel",
+  "max_length": 256,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "num_train_epochs": 4,
+  "temperature": 2.0,
+  "seed": 42,
+  "dataset_path": "research/datasets/final_dataset.jsonl",
+  "mlflow_experiment": "mental-health-v2"
+}
