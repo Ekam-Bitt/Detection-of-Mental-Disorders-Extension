@@ -1,179 +1,282 @@
 import { LABELS, LABEL_ORDER } from '../config.js';
+import { describeRisk } from './analysis.js';
+import { renderSentimentChart, renderTrendChart } from './chart.js';
 import { isShielded } from './shield.js';
 
-const SELECTORS = {
-  filterBtns: '.filter-btn',
-  commentsContainer: '#commentsContainer',
-  analyzeBtn: '#analyze',
-  loadMoreBtn: '#loadMore',
-  loadMoreContainer: '#loadMoreContainer',
-  chartContainer: '.chart-container',
-  filterContainer: '.filter-container',
-  summaryContainer: '#summaryContainer',
-};
+const element = (selector) => document.querySelector(selector);
+const elements = (selector) => Array.from(document.querySelectorAll(selector));
 
-const LABEL_INFO = LABELS;
+export function setActiveView(view) {
+  elements('[data-view-toggle]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.viewToggle === view);
+  });
 
-const getEl = (selector) => document.querySelector(selector);
-const getAllEl = (selector) => document.querySelectorAll(selector);
+  element('#dashboardView')?.classList.toggle('hidden', view !== 'dashboard');
+  element('#analysisView')?.classList.toggle('hidden', view !== 'analysis');
+}
 
-export function showLoader(text) {
-  const chartContainer = getEl(SELECTORS.chartContainer);
-  if (chartContainer) {
-    chartContainer.innerHTML = `
-            <div class="loader">
-                <img src="icons/spinner.gif" class="loader-gif" alt="Loading">
-                <div class="loader-text">${text}</div>
-            </div>`;
+export function showAnalysisLoader(text) {
+  const status = element('#analysisStatus');
+  if (status) {
+    status.textContent = text;
+    status.classList.remove('hidden');
+  }
+
+  element('#pageChartPanel')?.classList.remove('hidden');
+  const chartBody = element('#pageChartPanel .panel-body');
+  if (chartBody) {
+    chartBody.innerHTML = `
+      <div class="loader">
+        <img src="icons/spinner.gif" class="loader-gif" alt="Loading" />
+        <div class="loader-text">${text}</div>
+      </div>
+    `;
   }
 }
 
-export function hideLoader() {
-  const chartContainer = getEl(SELECTORS.chartContainer);
-  if (chartContainer) {
-    chartContainer.innerHTML = '<canvas id="sentimentChart"></canvas>';
+export function hideAnalysisLoader() {
+  const status = element('#analysisStatus');
+  if (status) {
+    status.classList.add('hidden');
+  }
+
+  const chartBody = element('#pageChartPanel .panel-body');
+  if (chartBody) {
+    chartBody.innerHTML = '<canvas id="sentimentChart"></canvas>';
   }
 }
 
-// API key UI removed. No functions related to updating or toggling an API key remain.
+export function renderDashboard(dashboard) {
+  setText('#weeklyHighRiskValue', `${Math.round(dashboard.highRiskShare * 100)}%`);
+  setText('#weeklyAvgRiskValue', `${Math.round(dashboard.averageRisk * 100)}%`);
+  setText(
+    '#weeklyVolatilityValue',
+    dashboard.volatility.flagged ? 'Elevated' : 'Stable'
+  );
+  setText('#trackedTimeValue', `${dashboard.totalMinutes} min`);
+  setText('#dashboardInsight', dashboard.insight);
 
-export function toggleCommentsContainer(show) {
-  getEl(SELECTORS.commentsContainer)?.classList.toggle('hidden', !show);
+  const updatedAt = dashboard.lastUpdated
+    ? new Date(dashboard.lastUpdated).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : 'No data yet';
+  setText('#dashboardUpdatedAt', `Updated ${updatedAt}`);
+
+  renderDietBreakdown(dashboard);
+  renderTrendChart(dashboard.dailySeries);
 }
 
-export function toggleLoadMore(show, remaining = 0) {
-  const container = getEl(SELECTORS.loadMoreContainer);
-  const button = getEl(SELECTORS.loadMoreBtn);
-  if (container) {
-    container.classList.toggle('hidden', !show);
-  }
-  if (button && show) {
-    button.textContent = `Load More (${remaining} remaining)`;
-  }
+function renderDietBreakdown(dashboard) {
+  const calm = Math.round(dashboard.calmShare * 100);
+  const guarded = Math.round(dashboard.guardedShare * 100);
+  const intense = Math.round(dashboard.intenseShare * 100);
+
+  setText('#dietCalmValue', `${calm}%`);
+  setText('#dietGuardedValue', `${guarded}%`);
+  setText('#dietIntenseValue', `${intense}%`);
+
+  const calmBar = element('#dietCalmBar');
+  const guardedBar = element('#dietGuardedBar');
+  const intenseBar = element('#dietIntenseBar');
+
+  if (calmBar) calmBar.style.width = `${calm}%`;
+  if (guardedBar) guardedBar.style.width = `${guarded}%`;
+  if (intenseBar) intenseBar.style.width = `${intense}%`;
 }
 
-export function setLoadMoreState(isLoading) {
-  const button = getEl(SELECTORS.loadMoreBtn);
-  if (button) {
-    button.disabled = isLoading;
-    button.textContent = isLoading ? 'Processing...' : 'Load More Comments';
+export function syncSettings(settings) {
+  const shieldMode = element('#shieldMode');
+  const thresholdSlider = element('#thresholdSlider');
+  const thresholdValue = element('#thresholdValue');
+  const nudgesToggle = element('#nudgesToggle');
+  const resourceToggle = element('#resourceToggle');
+
+  if (shieldMode) shieldMode.checked = settings.shieldEnabled;
+  if (thresholdSlider)
+    thresholdSlider.value = Math.round(settings.shieldThreshold * 100);
+  if (thresholdValue) {
+    thresholdValue.textContent = `${Math.round(settings.shieldThreshold * 100)}%`;
   }
+  if (nudgesToggle) nudgesToggle.checked = settings.nudgesEnabled;
+  if (resourceToggle) resourceToggle.checked = settings.resourcePromptsEnabled;
 }
 
-export function updateSummary(summary) {
-  // summary is expected to be an object keyed by LABEL_*
+export function renderAnalysis(metrics, topComments, activeFilter, settings) {
+  renderPageMetricCards(metrics);
+  renderSummary(metrics.summary);
+  hideAnalysisLoader();
+  renderSentimentChart(metrics.summary);
+  element('#filterContainer')?.classList.remove('hidden');
+  element('#pageSummary')?.classList.remove('hidden');
+  displayResults(
+    getFilteredResults(metrics.results, activeFilter),
+    topComments,
+    activeFilter,
+    settings
+  );
+  setActiveFilter(activeFilter);
+}
+
+function renderPageMetricCards(metrics) {
+  setText('#pageRiskValue', `${Math.round(metrics.averageRisk * 100)}%`);
+  setText('#pageHighRiskValue', `${Math.round(metrics.toxicRatio * 100)}%`);
+  setText(
+    '#pageVolatilityValue',
+    metrics.volatility.flagged
+      ? `${Math.round(metrics.volatility.maxSwing * 100)} pt swing`
+      : 'Steady'
+  );
+
+  setText(
+    '#pageRiskDetail',
+    `${describeRisk(metrics.averageRisk)} exposure across ${
+      metrics.totalComments
+    } comments`
+  );
+  setText(
+    '#pageHighRiskDetail',
+    `${metrics.highRiskCount} comments crossed the high-risk threshold`
+  );
+  setText(
+    '#pageVolatilityDetail',
+    metrics.volatility.flagged
+      ? 'Rapid emotional swings were detected inside this thread.'
+      : 'The thread tone was comparatively consistent.'
+  );
+}
+
+export function renderSummary(summary) {
   LABEL_ORDER.forEach((label) => {
-    const el = getEl(`#summary-${label}`);
-    if (el) el.textContent = summary[label] || 0;
+    setText(`#summary-${label}`, summary[label] || 0);
   });
 }
 
-export function displayResults(results, topComments, filter) {
-  const container = getEl(SELECTORS.commentsContainer);
+export function displayResults(results, topComments, filter, settings) {
+  const container = element('#commentsContainer');
   if (!container) return;
 
   container.innerHTML = '';
 
-  if (results.length === 0) {
-    container.innerHTML = '<div class="no-comments">No comments found</div>';
+  if (!results.length) {
+    container.innerHTML =
+      '<div class="no-comments">No matching comments in this view yet.</div>';
     return;
   }
 
   const fragment = document.createDocumentFragment();
   results.forEach((result) => {
-    if (!result?.predictions || result.predictions.length === 0) return;
-    const commentDiv = createCommentElement(result, topComments, filter);
-    fragment.appendChild(commentDiv);
+    fragment.appendChild(createCommentElement(result, topComments, filter, settings));
   });
   container.appendChild(fragment);
 }
 
-function createCommentElement(result, topComments, filter) {
+function createCommentElement(result, topComments, filter, settings) {
   const commentDiv = document.createElement('div');
-  const topPrediction = result.predictions.reduce((prev, current) =>
-    prev.score > current.score ? prev : current
-  );
-  const topColor = LABEL_INFO[topPrediction.label]?.color || '#ddd';
-  commentDiv.className = `comment`;
-  commentDiv.style.borderLeft = `5px solid ${topColor}`;
+  const topColor = LABELS[result.topPrediction?.label]?.color || '#dbe2ea';
+  commentDiv.className = 'comment';
+  commentDiv.style.borderLeftColor = topColor;
 
-  const topCommentForLabel = topComments[topPrediction.label];
   const isTopComment =
-    topCommentForLabel && result.originalIndex === topCommentForLabel.originalIndex;
+    topComments[result.topPrediction?.label]?.originalIndex === result.originalIndex;
+
+  const header = document.createElement('div');
+  header.className = 'comment-meta';
+  header.innerHTML = `
+    <span class="comment-pill" style="background:${topColor}20;color:${topColor};">
+      ${LABELS[result.topPrediction?.label]?.name || 'Unknown'}
+    </span>
+    <span class="comment-pill subtle">${describeRisk(result.riskScore)} ${Math.round(
+      result.riskScore * 100
+    )}%</span>
+    ${
+      isTopComment && filter !== 'all'
+        ? '<span class="comment-pill subtle">Top match</span>'
+        : ''
+    }
+  `;
 
   const commentText = document.createElement('div');
   commentText.className = 'comment-text';
   commentText.textContent = result.text;
 
-  const sentimentBarsContainer = document.createElement('div');
-  sentimentBarsContainer.className = 'sentiment-bars';
+  const sentimentBars = document.createElement('div');
+  sentimentBars.className = 'sentiment-bars';
 
-  result.predictions.forEach((p) => {
-    const info = LABEL_INFO[p.label] || { name: p.label, color: '#ccc' };
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'sentiment-label';
-    labelDiv.innerHTML = `<span>${info.name}</span><span>${(p.score * 100).toFixed(
-      2
+  result.predictions.forEach((prediction) => {
+    const info = LABELS[prediction.label] || {
+      name: prediction.label,
+      color: '#94a3b8',
+    };
+    const label = document.createElement('div');
+    label.className = 'sentiment-label';
+    label.innerHTML = `<span>${info.name}</span><span>${Math.round(
+      prediction.score * 100
     )}%</span>`;
 
-    const barDiv = document.createElement('div');
-    barDiv.className = 'sentiment-bar';
-    const fillDiv = document.createElement('div');
-    fillDiv.className = 'sentiment-fill';
-    fillDiv.style.width = `${(p.score * 100).toFixed(2)}%`;
-    fillDiv.style.backgroundColor = info.color;
-    barDiv.appendChild(fillDiv);
+    const bar = document.createElement('div');
+    bar.className = 'sentiment-bar';
+    bar.innerHTML = `<div class="sentiment-fill" style="width:${Math.round(
+      prediction.score * 100
+    )}%;background:${info.color};"></div>`;
 
-    sentimentBarsContainer.appendChild(labelDiv);
-    sentimentBarsContainer.appendChild(barDiv);
+    sentimentBars.appendChild(label);
+    sentimentBars.appendChild(bar);
   });
 
-  let badge = null;
-  if (isTopComment && filter !== 'all') {
-    const human = LABEL_INFO[topPrediction.label]?.name || topPrediction.label;
-    badge = document.createElement('div');
-    badge.className = 'top-badge';
-    badge.textContent = `Top ${human}`;
-    badge.style.backgroundColor = topColor;
-  }
+  commentDiv.appendChild(header);
+  commentDiv.appendChild(commentText);
+  commentDiv.appendChild(sentimentBars);
 
-  if (isShielded(topPrediction.score)) {
+  if (isShielded(result.riskScore, settings)) {
     commentDiv.classList.add('shielded');
-    commentDiv.dataset.shielded = 'true';
-
-    const shieldContent = document.createElement('div');
-    shieldContent.className = 'shield-content';
-    shieldContent.appendChild(commentText);
-    shieldContent.appendChild(sentimentBarsContainer);
-    if (badge) shieldContent.appendChild(badge);
-    commentDiv.appendChild(shieldContent);
-
-    const overlay = document.createElement('div');
-    overlay.className = 'shield-overlay';
-    overlay.textContent = 'Click to reveal';
-    overlay.addEventListener('click', (e) => {
-      e.stopPropagation();
-      commentDiv.classList.add('revealed');
-      overlay.style.display = 'none';
-    });
-    commentDiv.appendChild(overlay);
-  } else {
-    commentDiv.appendChild(commentText);
-    commentDiv.appendChild(sentimentBarsContainer);
-    if (badge) commentDiv.appendChild(badge);
+    commentDiv.title = 'Click to reveal this comment';
+    commentDiv.addEventListener(
+      'click',
+      () => {
+        commentDiv.classList.toggle('revealed');
+      },
+      { once: true }
+    );
   }
 
   return commentDiv;
 }
 
+export function getFilteredResults(results, filter) {
+  if (filter === 'all') {
+    return [...results].sort((left, right) => left.originalIndex - right.originalIndex);
+  }
+
+  return results
+    .filter((result) =>
+      result.predictions?.some((prediction) => prediction.label === filter)
+    )
+    .sort((left, right) => {
+      const leftScore =
+        left.predictions.find((prediction) => prediction.label === filter)?.score || 0;
+      const rightScore =
+        right.predictions.find((prediction) => prediction.label === filter)?.score || 0;
+      return rightScore - leftScore;
+    });
+}
+
 export function setActiveFilter(filter) {
-  getAllEl(SELECTORS.filterBtns).forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.filter === filter);
+  elements('.filter-btn').forEach((button) => {
+    button.classList.toggle('active', button.dataset.filter === filter);
   });
 }
 
-export function showResultsContainers() {
-  getEl(SELECTORS.chartContainer)?.classList.remove('hidden');
-  getEl(SELECTORS.filterContainer)?.classList.remove('hidden');
-  getEl(SELECTORS.summaryContainer)?.classList.remove('hidden');
+export function showAnalysisError(message) {
+  hideAnalysisLoader();
+  setText('#analysisStatus', message);
+  element('#analysisStatus')?.classList.remove('hidden');
+}
+
+function setText(selector, value) {
+  const target = element(selector);
+  if (target) target.textContent = value;
 }

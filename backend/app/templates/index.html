@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mental Wellbeing Guard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero" id="hub">
+        <nav class="topbar">
+          <div class="brand">
+            <span class="brand-mark">MW</span>
+            <span>Mental Wellbeing Guard</span>
+          </div>
+          <div class="topbar-links">
+            <a href="#dashboard">Dashboard</a>
+            <a href="#self-check">Self-check</a>
+            <a href="#companion">Extension</a>
+            <a href="#resources">Resources</a>
+          </div>
+        </nav>
+
+        <div class="hero-grid">
+          <div>
+            <p class="eyebrow">Local-first wellbeing intelligence</p>
+            <h1>One calm hub for self-checks, trend review, and live browser protection.</h1>
+            <p class="hero-copy">
+              Analyze text privately with your local model, review a shared emotional timeline,
+              and let the extension act as your in-feed safety net.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#self-check">Check text now</a>
+              <a class="button button-secondary" href="#dashboard">Review your trends</a>
+            </div>
+          </div>
+
+          <aside class="hero-card">
+            <div class="mini-stat">
+              <span>Product surfaces</span>
+              <strong>Web hub + extension + local model</strong>
+            </div>
+            <div class="mini-stat">
+              <span>Data posture</span>
+              <strong>Stored locally on this machine</strong>
+            </div>
+            <div class="mini-stat">
+              <span>Best for</span>
+              <strong>Self-checks, browsing guardrails, and weekly reflection</strong>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main>
+        <section class="section" id="dashboard">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2>Your emotional diet, across self-checks and browsing.</h2>
+            </div>
+            <p class="section-copy">
+              Exposure metrics come from supported browsing sessions. Manual self-checks are woven
+              into the same recent timeline.
+            </p>
+          </div>
+
+          <div class="metric-grid" id="dashboardMetrics">
+            <article class="metric-card">
+              <span class="metric-label">Weekly high-risk exposure</span>
+              <strong class="metric-value" id="weeklyHighRiskValue">0%</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Average risk</span>
+              <strong class="metric-value" id="weeklyAvgRiskValue">0%</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Temporal volatility</span>
+              <strong class="metric-value" id="weeklyVolatilityValue">Stable</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">Tracked browsing time</span>
+              <strong class="metric-value" id="trackedTimeValue">0 min</strong>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel panel-large">
+              <div class="panel-head">
+                <div>
+                  <h3>Weekly pattern</h3>
+                  <p id="dashboardUpdatedAt">Updated just now</p>
+                </div>
+                <span class="pill">Shared across site + extension</span>
+              </div>
+              <p class="panel-copy" id="dashboardInsight">
+                Run a self-check or browse a supported thread to start building your dashboard.
+              </p>
+              <div class="trend-list" id="trendList"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Emotional diet</h3>
+                  <p>Time spent across calmer and more intense browsing states.</p>
+                </div>
+              </div>
+              <div class="diet-breakdown">
+                <div class="diet-row">
+                  <span>Steady</span>
+                  <div class="diet-track"><div class="diet-fill calm" id="dietCalmBar"></div></div>
+                  <strong id="dietCalmValue">0%</strong>
+                </div>
+                <div class="diet-row">
+                  <span>Watchful</span>
+                  <div class="diet-track"><div class="diet-fill guarded" id="dietGuardedBar"></div></div>
+                  <strong id="dietGuardedValue">0%</strong>
+                </div>
+                <div class="diet-row">
+                  <span>High intensity</span>
+                  <div class="diet-track"><div class="diet-fill intense" id="dietIntenseBar"></div></div>
+                  <strong id="dietIntenseValue">0%</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Surface mix</h3>
+                  <p>How the hub and extension contribute to your timeline.</p>
+                </div>
+              </div>
+              <div class="source-breakdown" id="sourceBreakdown"></div>
+            </article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Recent timeline</h3>
+                <p>The latest self-checks and browsing events worth reviewing.</p>
+              </div>
+            </div>
+            <div class="timeline-list" id="recentEvents"></div>
+          </article>
+        </section>
+
+        <section class="section" id="self-check">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Self-check</p>
+              <h2>Paste a text sample and review it privately.</h2>
+            </div>
+            <p class="section-copy">
+              This preserves the manual text-check journey as a first-class part of the product,
+              while saving the result into the shared dashboard.
+            </p>
+          </div>
+
+          <div class="check-grid">
+            <article class="panel panel-large">
+              <label class="input-label" for="selfCheckInput">Text to analyze</label>
+              <textarea
+                id="selfCheckInput"
+                class="text-input"
+                placeholder="Paste a journal note, draft, message, or any text you want to reflect on."
+              ></textarea>
+              <div class="check-actions">
+                <button class="button button-primary" id="selfCheckButton">Analyze text</button>
+                <p class="helper-text">The result is stored locally in this machine's wellbeing timeline.</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Support prompt</h3>
+                  <p>Contextual help appears here when the result is high risk.</p>
+                </div>
+              </div>
+              <div class="support-card" id="supportCard">
+                <p class="empty-state">No support prompt yet. Run a self-check to populate this panel.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="analysis-result hidden" id="selfCheckResult">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Analysis result</h3>
+                  <p id="selfCheckSummary">Your latest self-check will appear here.</p>
+                </div>
+                <span class="pill" id="selfCheckRiskPill">Steady</span>
+              </div>
+              <div class="result-grid">
+                <div class="result-hero">
+                  <span class="metric-label">Top signal</span>
+                  <strong class="result-label" id="selfCheckTopLabel">Normal</strong>
+                  <p class="helper-text" id="selfCheckRiskDetail">Risk score will appear here.</p>
+                </div>
+                <div class="result-bars" id="predictionBars"></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="companion">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Browser companion</p>
+              <h2>The extension is your in-context safety net.</h2>
+            </div>
+            <p class="section-copy">
+              Use the web hub for reflection and the extension for immediate protection on YouTube,
+              Reddit, and X.
+            </p>
+          </div>
+          <div class="companion-grid">
+            <article class="panel">
+              <h3>What syncs back here</h3>
+              <ul class="feature-list">
+                <li>Browsing exposure summaries</li>
+                <li>Shared shield, nudge, and support settings</li>
+                <li>Recent high-intensity thread events</li>
+              </ul>
+            </article>
+            <article class="panel">
+              <h3>What stays best in the extension</h3>
+              <ul class="feature-list">
+                <li>Current-thread comment scanning</li>
+                <li>Shield Mode and smart nudges</li>
+                <li>Draft-time support prompts</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="resources">
+          <article class="panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Resources</p>
+                <h2>Supportive, not diagnostic.</h2>
+              </div>
+              <p class="section-copy">
+                This product is for reflective support and educational insight only. It is not a
+                medical diagnosis system.
+              </p>
+            </div>
+            <div class="resource-copy">
+              <p>
+                If a result feels urgent or personally unsafe, contact local emergency support or a
+                trusted person immediately. The self-check flow also surfaces hotline guidance for
+                higher-risk text.
+              </p>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      window.MWG_VERSION = "{{ version }}";
+    </script>
+    <script type="module" src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

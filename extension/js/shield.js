@@ -1,56 +1,28 @@
-import { DEFAULT_SHIELD_THRESHOLD, SHIELD_STORAGE_KEY } from '../config.js';
+import { DEFAULT_WELLBEING_SETTINGS } from '../config.js';
+import { loadWellbeingSettings, saveWellbeingSettings } from './wellbeing-storage.js';
 
 export const shieldState = {
-  enabled: false,
-  threshold: DEFAULT_SHIELD_THRESHOLD,
+  ...DEFAULT_WELLBEING_SETTINGS,
 };
 
 export async function loadShieldSettings() {
-  try {
-    const result = await chrome.storage.local.get(SHIELD_STORAGE_KEY);
-    if (result[SHIELD_STORAGE_KEY]) {
-      shieldState.enabled = result[SHIELD_STORAGE_KEY].enabled;
-      shieldState.threshold = result[SHIELD_STORAGE_KEY].threshold;
-    }
-  } catch (error) {
-    console.error('Failed to load shield settings:', error);
-    shieldState.enabled = false;
-    shieldState.threshold = DEFAULT_SHIELD_THRESHOLD;
-  }
+  const settings = await loadWellbeingSettings();
+  Object.assign(shieldState, settings);
   return shieldState;
 }
 
-export async function saveShieldSettings() {
-  try {
-    await chrome.storage.local.set({
-      [SHIELD_STORAGE_KEY]: {
-        enabled: shieldState.enabled,
-        threshold: shieldState.threshold,
-      },
-    });
-  } catch (error) {
-    console.error('Failed to save shield settings:', error);
-  }
+export async function setShieldMode(enabled) {
+  const next = await saveWellbeingSettings({ shieldEnabled: enabled });
+  Object.assign(shieldState, next);
+  return shieldState;
 }
 
-export function setShieldMode(enabled) {
-  shieldState.enabled = enabled;
-  saveShieldSettings();
+export async function setThreshold(value) {
+  const next = await saveWellbeingSettings({ shieldThreshold: value });
+  Object.assign(shieldState, next);
+  return shieldState;
 }
 
-export function setThreshold(value) {
-  shieldState.threshold = value;
-  saveShieldSettings();
-}
-
-export function isShielded(score) {
-  return shieldState.enabled && score < shieldState.threshold;
-}
-
-export function getThreshold() {
-  return shieldState.threshold;
-}
-
-export function isEnabled() {
-  return shieldState.enabled;
+export function isShielded(riskScore, settings = shieldState) {
+  return settings.shieldEnabled && riskScore >= settings.shieldThreshold;
 }

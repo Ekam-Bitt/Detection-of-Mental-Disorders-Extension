@@ -1,90 +1,167 @@
-import * as ui from './ui.js';
 import { extractAndAnalyze } from './comments.js';
 import { state } from './state.js';
+import * as ui from './ui.js';
+import { getApiBaseUrl } from './backend-api.js';
 import { loadShieldSettings, setShieldMode, setThreshold } from './shield.js';
+import {
+  getDashboardSnapshot,
+  loadWellbeingSettings,
+  saveWellbeingSettings,
+} from './wellbeing-storage.js';
+
+let currentSettings = null;
+let currentAnalysis = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize shield mode
-  const shieldSettings = await loadShieldSettings();
-  state.shieldEnabled = shieldSettings.enabled;
-  state.shieldThreshold = shieldSettings.threshold;
+  currentSettings = await loadShieldSettings();
+  await refreshDashboard();
+  ui.syncSettings(currentSettings);
+  ui.setActiveView('dashboard');
 
-  // Shield mode toggle
-  const shieldModeCheckbox = document.getElementById('shieldMode');
-  const thresholdContainer = document.getElementById('thresholdContainer');
-  const thresholdSlider = document.getElementById('thresholdSlider');
-  const thresholdValue = document.getElementById('thresholdValue');
+  bindViewToggles();
+  bindSettings();
+  bindFilters();
+  bindAnalyzeButton();
+  bindOpenHub();
+});
 
-  if (shieldModeCheckbox) {
-    shieldModeCheckbox.checked = state.shieldEnabled;
-    thresholdContainer?.classList.toggle('hidden', !state.shieldEnabled);
-
-    shieldModeCheckbox.addEventListener('change', (e) => {
-      setShieldMode(e.target.checked);
-      state.shieldEnabled = e.target.checked;
-      thresholdContainer?.classList.toggle('hidden', !e.target.checked);
-      // Re-render comments if already displayed
-      if (state.activeFilter) {
-        const filterBtn = document.querySelector(
-          `.filter-btn[data-filter="${state.activeFilter}"]`
-        );
-        if (filterBtn) filterBtn.click();
-      }
+async function refreshDashboard() {
+  try {
+    const snapshot = await getDashboardSnapshot();
+    ui.renderDashboard(snapshot.dashboard);
+  } catch (error) {
+    console.error('Failed to load dashboard snapshot:', error);
+    ui.renderDashboard({
+      highRiskShare: 0,
+      averageRisk: 0,
+      volatility: { flagged: false },
+      totalMinutes: 0,
+      insight:
+        'The local hub is unreachable. Start the backend to sync dashboard data.',
+      lastUpdated: null,
+      calmShare: 0,
+      guardedShare: 0,
+      intenseShare: 0,
+      dailySeries: [],
     });
   }
+}
 
-  if (thresholdSlider) {
-    thresholdSlider.value = state.shieldThreshold * 100;
-    thresholdValue.textContent = `${Math.round(state.shieldThreshold * 100)}%`;
+function bindViewToggles() {
+  document.querySelectorAll('[data-view-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      ui.setActiveView(button.dataset.viewToggle);
+    });
+  });
+}
 
-    thresholdSlider.addEventListener('input', (e) => {
-      const value = e.target.value / 100;
-      setThreshold(value);
-      state.shieldThreshold = value;
-      thresholdValue.textContent = `${Math.round(value * 100)}%`;
+function bindSettings() {
+  document.getElementById('shieldMode')?.addEventListener('change', async (event) => {
+    currentSettings = await setShieldMode(event.target.checked);
+    rerenderAnalysis();
+  });
+
+  document
+    .getElementById('thresholdSlider')
+    ?.addEventListener('input', async (event) => {
+      currentSettings = await setThreshold(Number(event.target.value) / 100);
+      ui.syncSettings(currentSettings);
+      rerenderAnalysis();
     });
 
-    thresholdSlider.addEventListener('change', () => {
-      // Re-render comments with new threshold
-      if (state.activeFilter) {
-        const filterBtn = document.querySelector(
-          `.filter-btn[data-filter="${state.activeFilter}"]`
-        );
-        if (filterBtn) filterBtn.click();
-      }
+  document.getElementById('nudgesToggle')?.addEventListener('change', async (event) => {
+    currentSettings = await saveWellbeingSettings({
+      nudgesEnabled: event.target.checked,
     });
-  }
+    ui.syncSettings(currentSettings);
+  });
 
-  // Filter buttons
+  document
+    .getElementById('resourceToggle')
+    ?.addEventListener('change', async (event) => {
+      currentSettings = await saveWellbeingSettings({
+        resourcePromptsEnabled: event.target.checked,
+      });
+      ui.syncSettings(currentSettings);
+    });
+}
+
+function bindFilters() {
   document.querySelectorAll('.filter-btn').forEach((button) => {
     button.addEventListener('click', () => {
-      const filter = button.dataset.filter;
-      state.activeFilter = filter;
-      ui.setActiveFilter(filter);
-      ui.toggleCommentsContainer(true);
-
-      let filteredResults = [];
-      if (filter === 'all') {
-        filteredResults = [...state.analyzedResults].sort(
-          (a, b) => a.originalIndex - b.originalIndex
-        );
-      } else {
-        filteredResults = state.analyzedResults
-          .filter((item) => item?.predictions?.some((p) => p.label === filter))
-          .sort((a, b) => {
-            const aScore = a.predictions.find((p) => p.label === filter)?.score || 0;
-            const bScore = b.predictions.find((p) => p.label === filter)?.score || 0;
-            return bScore - aScore;
-          });
-      }
-      ui.displayResults(filteredResults, state.topComments, filter);
+      state.activeFilter = button.dataset.filter;
+      rerenderAnalysis();
     });
   });
+}
 
-  document.getElementById('analyze').addEventListener('click', () => {
-    ui.showResultsContainers();
-    extractAndAnalyze();
+function bindAnalyzeButton() {
+  document.getElementById('analyze')?.addEventListener('click', async () => {
+    ui.setActiveView('analysis');
+
+    try {
+      const analysis = await extractAndAnalyze({
+        onProgress: (message) => ui.showAnalysisLoader(message),
+      });
+
+      if (!analysis.comments.length) {
+        ui.showAnalysisError('No supported comments were found on this page.');
+        return;
+      }
+
+      currentAnalysis = analysis;
+      rerenderAnalysis();
+
+      await chrome.runtime.sendMessage({
+        type: 'MANUAL_ANALYSIS_CAPTURED',
+        payload: {
+          tabId: analysis.tab.id,
+          url: analysis.tab.url,
+          title: analysis.tab.title,
+          metrics: analysis.metrics,
+        },
+      });
+
+      await refreshDashboard();
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      const message =
+        error.name === 'AbortError'
+          ? 'The local analysis service timed out. Please try again.'
+          : `Analysis failed: ${error.message}`;
+      ui.showAnalysisError(message);
+    }
   });
+}
 
-  ui.setActiveFilter(state.activeFilter);
+function bindOpenHub() {
+  document.getElementById('openHub')?.addEventListener('click', async () => {
+    const baseUrl = await getApiBaseUrl();
+    await chrome.tabs.create({ url: `${baseUrl}/` });
+  });
+}
+
+function rerenderAnalysis() {
+  if (!currentAnalysis) return;
+
+  ui.renderAnalysis(
+    currentAnalysis.metrics,
+    currentAnalysis.topComments,
+    state.activeFilter,
+    currentSettings
+  );
+}
+
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName !== 'local') return;
+
+  if (changes.wellbeingSettings) {
+    currentSettings = await loadWellbeingSettings();
+    ui.syncSettings(currentSettings);
+    rerenderAnalysis();
+  }
+
+  if (changes.wellbeingHistory) {
+    await refreshDashboard();
+  }
 });

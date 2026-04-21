@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Detection of Mental Disorders</title>
+    <title>Mental Wellbeing Guard</title>
     <script src="libs/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,77 +12,241 @@
     />
   </head>
   <body>
-    <header>
-      <h1>Detection of Mental Disorders</h1>
-      <div class="subtitle">Analyze sentiment in comments</div>
+    <header class="hero">
+      <div class="hero-kicker">Mental Wellbeing Guard</div>
+      <h1>Protect your feed before it pulls you under.</h1>
+      <p class="subtitle">
+        Track your emotional diet, filter high-intensity content, and surface support
+        when a thread turns unsafe.
+      </p>
     </header>
 
-    <button id="analyze" class="analyze-btn" style="margin-top: 20px">
-      Analyze Comments
-    </button>
+    <nav class="view-switch">
+      <button class="view-switch-btn active" data-view-toggle="dashboard">
+        Dashboard
+      </button>
+      <button class="view-switch-btn" data-view-toggle="analysis">
+        Current Thread
+      </button>
+    </nav>
 
-    <div class="shield-settings" id="shieldSettings">
-      <div class="shield-toggle">
-        <label for="shieldMode">Shield Mode</label>
-        <input type="checkbox" id="shieldMode" />
+    <section id="dashboardView">
+      <div class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-label">Weekly high-risk exposure</div>
+          <div class="stat-value" id="weeklyHighRiskValue">0%</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Average exposure score</div>
+          <div class="stat-value" id="weeklyAvgRiskValue">0%</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Temporal volatility</div>
+          <div class="stat-value" id="weeklyVolatilityValue">Stable</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Tracked time</div>
+          <div class="stat-value" id="trackedTimeValue">0 min</div>
+        </article>
       </div>
-      <div class="threshold-slider hidden" id="thresholdContainer">
-        <label for="thresholdSlider"
-          >Toxicity Threshold: <span id="thresholdValue">30%</span></label
-        >
-        <input type="range" id="thresholdSlider" min="0" max="100" value="30" />
-      </div>
-    </div>
 
-    <div class="summary seven-summary hidden" id="summaryContainer">
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_0">0</div>
-        <div class="summary-label">ADHD</div>
+      <div class="dashboard-link-row">
+        <button class="link-button" id="openHub">Open Full Hub</button>
       </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_1">0</div>
-        <div class="summary-label">Anxiety</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_2">0</div>
-        <div class="summary-label">Autism</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_3">0</div>
-        <div class="summary-label">BPD</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_4">0</div>
-        <div class="summary-label">Depression</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_5">0</div>
-        <div class="summary-label">PTSD</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-number" id="summary-LABEL_6">0</div>
-        <div class="summary-label">Normal</div>
-      </div>
-    </div>
 
-    <div class="chart-container hidden">
-      <canvas id="sentimentChart"></canvas>
-    </div>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Emotional Diet</h2>
+            <p id="dashboardUpdatedAt">Updated just now</p>
+          </div>
+        </div>
+        <div class="panel-body trend-body">
+          <div class="trend-copy">
+            <p id="dashboardInsight">
+              Not enough weekly exposure data yet. Browse supported threads to build
+              your dashboard.
+            </p>
+            <div class="diet-breakdown">
+              <div class="diet-row">
+                <span>Steady</span>
+                <div class="diet-bar-track">
+                  <div id="dietCalmBar" class="diet-bar calm"></div>
+                </div>
+                <strong id="dietCalmValue">0%</strong>
+              </div>
+              <div class="diet-row">
+                <span>Watchful</span>
+                <div class="diet-bar-track">
+                  <div id="dietGuardedBar" class="diet-bar guarded"></div>
+                </div>
+                <strong id="dietGuardedValue">0%</strong>
+              </div>
+              <div class="diet-row">
+                <span>High intensity</span>
+                <div class="diet-bar-track">
+                  <div id="dietIntenseBar" class="diet-bar intense"></div>
+                </div>
+                <strong id="dietIntenseValue">0%</strong>
+              </div>
+            </div>
+          </div>
+          <div class="trend-chart">
+            <canvas id="weeklyTrendChart"></canvas>
+          </div>
+        </div>
+      </section>
 
-    <div class="filter-container hidden">
-      <button class="filter-btn" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="LABEL_0">ADHD</button>
-      <button class="filter-btn" data-filter="LABEL_1">Anxiety</button>
-      <button class="filter-btn" data-filter="LABEL_2">Autism</button>
-      <button class="filter-btn" data-filter="LABEL_3">BPD</button>
-      <button class="filter-btn" data-filter="LABEL_4">Depression</button>
-      <button class="filter-btn" data-filter="LABEL_5">PTSD</button>
-      <button class="filter-btn" data-filter="LABEL_6">Normal</button>
-    </div>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Safety Net</h2>
+            <p>These controls apply live on supported sites.</p>
+          </div>
+        </div>
+        <div class="panel-body settings-grid">
+          <div class="setting-card">
+            <div>
+              <h3>Shield Mode</h3>
+              <p>Hide comments when their distress score crosses your threshold.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="shieldMode" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
 
-    <div id="commentsContainer" class="comments-container hidden">
-      <!-- Comments will be displayed here when a filter is selected -->
-    </div>
+          <div class="setting-card full-width">
+            <div>
+              <h3>Shield Threshold</h3>
+              <p>Higher values only hide the most intense comments.</p>
+            </div>
+            <label class="range-label" for="thresholdSlider">
+              Trigger above <span id="thresholdValue">62%</span>
+            </label>
+            <input type="range" id="thresholdSlider" min="35" max="95" value="62" />
+          </div>
+
+          <div class="setting-card">
+            <div>
+              <h3>Smart Nudges</h3>
+              <p>Prompt a breather when a thread starts looking like a rabbit hole.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="nudgesToggle" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-card">
+            <div>
+              <h3>Support Prompts</h3>
+              <p>
+                Inject local support resources when high-risk draft language is
+                detected.
+              </p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="resourceToggle" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="analysisView" class="hidden">
+      <div class="analysis-toolbar">
+        <button id="analyze" class="analyze-btn">Analyze Current Thread</button>
+        <div class="analysis-status hidden" id="analysisStatus"></div>
+      </div>
+
+      <div class="stats-grid page-stats">
+        <article class="stat-card">
+          <div class="stat-label">Average risk</div>
+          <div class="stat-value" id="pageRiskValue">0%</div>
+          <div class="stat-detail" id="pageRiskDetail">
+            Run a scan to inspect this thread.
+          </div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">High-risk comments</div>
+          <div class="stat-value" id="pageHighRiskValue">0%</div>
+          <div class="stat-detail" id="pageHighRiskDetail">No thread data yet.</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">In-thread volatility</div>
+          <div class="stat-value" id="pageVolatilityValue">Steady</div>
+          <div class="stat-detail" id="pageVolatilityDetail">No thread data yet.</div>
+        </article>
+      </div>
+
+      <section class="panel hidden" id="pageSummary">
+        <div class="panel-head">
+          <div>
+            <h2>Detected Signals</h2>
+            <p>Count of top labels across the analyzed thread.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="summary seven-summary" id="summaryContainer">
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_0">0</div>
+              <div class="summary-label">ADHD</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_1">0</div>
+              <div class="summary-label">Anxiety</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_2">0</div>
+              <div class="summary-label">Autism</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_3">0</div>
+              <div class="summary-label">BPD</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_4">0</div>
+              <div class="summary-label">Depression</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_5">0</div>
+              <div class="summary-label">PTSD</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number" id="summary-LABEL_6">0</div>
+              <div class="summary-label">Normal</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="pageChartPanel">
+        <div class="panel-head">
+          <div>
+            <h2>Thread Mix</h2>
+            <p>How the analyzed comments distribute across detected signals.</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <canvas id="sentimentChart"></canvas>
+        </div>
+      </section>
+
+      <div class="filter-container hidden" id="filterContainer">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="LABEL_0">ADHD</button>
+        <button class="filter-btn" data-filter="LABEL_1">Anxiety</button>
+        <button class="filter-btn" data-filter="LABEL_2">Autism</button>
+        <button class="filter-btn" data-filter="LABEL_3">BPD</button>
+        <button class="filter-btn" data-filter="LABEL_4">Depression</button>
+        <button class="filter-btn" data-filter="LABEL_5">PTSD</button>
+        <button class="filter-btn" data-filter="LABEL_6">Normal</button>
+      </div>
+
+      <div id="commentsContainer" class="comments-container"></div>
+    </section>
 
     <script type="module" src="js/main.js"></script>
   </body>

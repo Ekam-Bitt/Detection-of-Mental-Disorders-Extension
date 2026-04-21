@@ -1,19 +1,12 @@
-import {
-  LABELS,
-  LABEL_ORDER,
-  BATCH_SIZE,
-  DEFAULT_SHIELD_THRESHOLD,
-} from '../config.js';
+import { BATCH_SIZE, LABEL_ORDER } from '../config.js';
 
 export const state = {
   analyzedResults: [],
   topComments: {},
   allExtractedComments: [],
   currentBatch: 0,
-  BATCH_SIZE,
   activeFilter: 'all',
-  shieldEnabled: false,
-  shieldThreshold: DEFAULT_SHIELD_THRESHOLD,
+  BATCH_SIZE,
 };
 
 export function resetState() {
@@ -24,8 +17,6 @@ export function resetState() {
   });
   state.allExtractedComments = [];
   state.currentBatch = 0;
-  state.shieldEnabled = false;
-  state.shieldThreshold = DEFAULT_SHIELD_THRESHOLD;
 }
 
 export function addAnalyzedResults(results) {
@@ -35,21 +26,15 @@ export function addAnalyzedResults(results) {
 
 function updateTopComments(batchResults) {
   batchResults.forEach((result) => {
-    if (result.predictions && result.predictions.length > 0) {
-      const topPrediction = result.predictions.reduce((prev, current) =>
-        prev.score > current.score ? prev : current
-      );
-      const label = topPrediction.label;
-      if (
-        !state.topComments[label] ||
-        topPrediction.score > state.topComments[label].score
-      ) {
-        state.topComments[label] = {
-          text: result.text,
-          score: topPrediction.score,
-          originalIndex: result.originalIndex,
-        };
-      }
+    if (!result.topPrediction) return;
+
+    const { label, score } = result.topPrediction;
+    if (!state.topComments[label] || score > state.topComments[label].score) {
+      state.topComments[label] = {
+        text: result.text,
+        score,
+        originalIndex: result.originalIndex,
+      };
     }
   });
 }
@@ -60,14 +45,14 @@ export function getSummary() {
     summary[label] = 0;
   });
 
-  state.analyzedResults.forEach(({ predictions }) => {
-    if (!predictions || predictions.length === 0) return;
-    const top = predictions.reduce((prev, current) =>
-      prev.score > current.score ? prev : current
-    );
-    if (summary.hasOwnProperty(top.label)) {
-      summary[top.label]++;
+  state.analyzedResults.forEach(({ topPrediction }) => {
+    if (
+      topPrediction &&
+      Object.prototype.hasOwnProperty.call(summary, topPrediction.label)
+    ) {
+      summary[topPrediction.label] += 1;
     }
   });
+
   return summary;
 }

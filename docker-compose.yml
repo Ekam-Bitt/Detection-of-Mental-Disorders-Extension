@@ -8,10 +8,16 @@ services:
       - "8000:8000"
     environment:
       - MODEL_PATH=/app/onnx_model_quantized
+      - WELLBEING_DB_PATH=/app/data/wellbeing.db
     networks:
       - mental-health-net
     restart: unless-stopped
+    volumes:
+      - wellbeing-data:/app/data
 
 networks:
   mental-health-net:
     driver: bridge
+
+volumes:
+  wellbeing-data:

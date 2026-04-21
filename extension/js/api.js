@@ -1,9 +1,9 @@
-import { DEFAULT_API_BASE_URL, API_TIMEOUT } from '../config.js';
+import { API_TIMEOUT } from '../config.js';
+import { getApiBaseUrl } from './backend-api.js';
 
 export async function analyzeEmotion(text) {
   try {
-    const storageResult = await chrome.storage.sync.get(['apiBaseUrl']);
-    const baseUrl = storageResult.apiBaseUrl || DEFAULT_API_BASE_URL;
+    const baseUrl = await getApiBaseUrl();
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -37,8 +37,7 @@ export async function analyzeEmotion(text) {
  * Returns an array of { text, predictions } in the same order as the input.
  */
 export async function analyzeBatch(texts) {
-  const storageResult = await chrome.storage.sync.get(['apiBaseUrl']);
-  const baseUrl = storageResult.apiBaseUrl || DEFAULT_API_BASE_URL;
+  const baseUrl = await getApiBaseUrl();
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
