@@ -1,8 +1,0 @@
-# Core dependencies
-Flask>=3.1,<4
-flask-cors>=6.0,<7
-gunicorn>=23,<26
-
-# ML dependencies
-torch>=2.2,<3
-transformers>=4.40,<5

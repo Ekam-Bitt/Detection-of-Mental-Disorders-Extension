@@ -1,18 +1,18 @@
-import { LABELS, LABEL_ORDER } from '../config.js';
+import { SIGNAL_MAP } from '../config.js';
 
 let chartInstance = null;
 
-export function renderChart(summary) {
+export function renderChart(signalPrevalence = []) {
   const chartContainer = document.querySelector('.chart-container');
   if (!chartContainer) return;
 
-  const existingCanvas = document.getElementById('sentimentChart');
+  const existingCanvas = document.getElementById('signalChart');
   if (existingCanvas) {
     existingCanvas.remove();
   }
 
   const canvas = document.createElement('canvas');
-  canvas.id = 'sentimentChart';
+  canvas.id = 'signalChart';
   chartContainer.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
@@ -22,33 +22,60 @@ export function renderChart(summary) {
     chartInstance = null;
   }
 
-  const labelNames = LABEL_ORDER.map((label) => LABELS[label].name);
-  const colors = LABEL_ORDER.map((label) => LABELS[label].color);
-  const data = LABEL_ORDER.map((label) => summary[label] || 0);
+  const rows = signalPrevalence
+    .filter((row) => row.key !== 'no_clear_signal')
+    .sort((a, b) => b.mean_score - a.mean_score);
+  const labelNames = rows.map(
+    (row) => SIGNAL_MAP[row.key]?.shortName || row.display_name
+  );
+  const colors = rows.map((row) => SIGNAL_MAP[row.key]?.color || '#6b7280');
+  const data = rows.map((row) => Number((row.mean_score * 100).toFixed(2)));
 
   chartInstance = new Chart(ctx, {
-    type: 'pie',
+    type: 'bar',
     data: {
       labels: labelNames,
       datasets: [
         {
           data,
           backgroundColor: colors,
-          borderWidth: 0,
+          borderRadius: 999,
+          borderSkipped: false,
         },
       ],
     },
     options: {
+      indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: 'bottom',
-          labels: {
-            font: {
-              size: 12,
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label(context) {
+              return `${context.raw}% mean signal score`;
             },
-            padding: 15,
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          max: 100,
+          grid: {
+            color: 'rgba(32, 53, 82, 0.08)',
+          },
+          ticks: {
+            callback(value) {
+              return `${value}%`;
+            },
+          },
+        },
+        y: {
+          grid: {
+            display: false,
           },
         },
       },

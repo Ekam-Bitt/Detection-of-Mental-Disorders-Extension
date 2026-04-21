@@ -1,0 +1,14 @@
+{
+  "name": "baseline_roberta_single_label",
+  "stage": "baseline",
+  "model_name": "roberta-base",
+  "task": "single_label_classification",
+  "max_length": 256,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "num_train_epochs": 3,
+  "early_stopping_metric": "macro_f1",
+  "seed": 42,
+  "dataset_path": "research/datasets/final_dataset.jsonl",
+  "notes": "Baseline reproduction of the original single-label setup for ablation comparison."
+}

@@ -1,0 +1,12 @@
+{
+  "fields": [
+    {"name": "text", "type": "string", "required": true},
+    {"name": "source_platform", "type": "enum", "values": ["reddit", "youtube", "x"], "required": true},
+    {"name": "thread_id", "type": "string", "required": false},
+    {"name": "post_id", "type": "string", "required": true},
+    {"name": "label_signals", "type": "list[string]", "required": true},
+    {"name": "severity", "type": "integer", "required": true},
+    {"name": "annotator_confidence", "type": "float", "required": true},
+    {"name": "split", "type": "enum", "values": ["train", "validation", "test", "cross_platform_test"], "required": true}
+  ]
+}

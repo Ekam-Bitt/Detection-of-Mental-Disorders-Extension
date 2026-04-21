@@ -1,0 +1,21 @@
+{
+  "name": "evaluation_v2",
+  "threshold": 0.5,
+  "scenarios": [
+    "in_domain_test",
+    "cross_platform_holdout",
+    "short_text_slice",
+    "long_text_slice",
+    "ambiguous_overlap_slice",
+    "crisis_false_negative_review"
+  ],
+  "metrics": [
+    "macro_f1",
+    "micro_f1",
+    "per_label_precision_recall_f1",
+    "auroc",
+    "severity_confusion_matrix",
+    "ece",
+    "latency_ms"
+  ]
+}

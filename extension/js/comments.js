@@ -1,13 +1,20 @@
-import { analyzeEmotion } from './api.js';
-import { state, resetState, addAnalyzedResults, getSummary } from './state.js';
+import { analyzeComments } from './api.js';
+import { MAX_COMMENTS_PER_REQUEST } from '../config.js';
+import {
+  getFilteredComments,
+  resetState,
+  setAnalysisResponse,
+  state,
+} from './state.js';
 import * as ui from './ui.js';
 import { renderChart } from './chart.js';
 
 export async function extractAndAnalyze() {
   resetState();
-  ui.toggleCommentsContainer(false);
-  ui.toggleLoadMore(false);
-  ui.showLoader('Extracting comments from page...');
+  ui.renderFilters();
+  ui.showResultsContainers();
+  ui.showLoader('Extracting visible comments from this page...');
+  ui.setRunMeta({});
 
   const [tab] = await chrome.tabs.query({
     active: true,
@@ -34,95 +41,78 @@ export async function extractAndAnalyze() {
       return acc;
     }, []);
 
-    state.allExtractedComments = comments;
+    const normalizedComments = comments
+      .filter((comment) => typeof comment?.text === 'string' && comment.text.trim())
+      .map((comment, index) => ({
+        text: comment.text.trim(),
+        source_platform: comment.source_platform || comment.source || 'reddit',
+        thread_id: comment.thread_id || null,
+        post_id: comment.post_id || `comment-${index}`,
+        timestamp: comment.timestamp || null,
+        originalIndex: comment.originalIndex ?? index,
+      }));
 
-    if (state.allExtractedComments.length === 0) {
-      ui.showLoader('No comments found on this page.');
+    if (normalizedComments.length === 0) {
+      ui.updateStatus('No visible comments were detected on this page.', 'warning');
+      ui.renderSummary({
+        comment_count: 0,
+        average_confidence: 0,
+        overall_uncertainty: 'high',
+        insufficient_evidence: true,
+        signal_prevalence: [],
+      });
+      renderChart([]);
+      ui.renderEvidence({});
+      ui.renderComments([], 'all');
       return;
     }
 
-    ui.showLoader(
-      `Found ${state.allExtractedComments.length} comments. Starting analysis...`
+    const commentsToAnalyze = normalizedComments.slice(0, MAX_COMMENTS_PER_REQUEST);
+    ui.updateStatus(
+      `Analyzing ${commentsToAnalyze.length} comments with the local v2 signal model...`,
+      'working'
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    processNextBatch();
+    const response = await analyzeComments(
+      commentsToAnalyze.map((comment) => ({
+        text: comment.text,
+        source_platform: comment.source_platform,
+        thread_id: comment.thread_id,
+        post_id: comment.post_id,
+        timestamp: comment.timestamp,
+      }))
+    );
+
+    setAnalysisResponse(response, {
+      detectedCount: normalizedComments.length,
+      processedCount: response?.metadata?.total_processed || commentsToAnalyze.length,
+      backend: response?.metadata?.backend || 'unknown',
+    });
+
+    ui.setRunMeta(state.lastRunMeta || {});
+    ui.setDisclaimer(response?.metadata?.disclaimer || '');
+    ui.renderSummary(response?.page_summary || {});
+    renderChart(response?.page_summary?.signal_prevalence || []);
+    ui.renderEvidence(response?.evidence || {});
+    ui.updateStatus(
+      response?.page_summary?.insufficient_evidence
+        ? 'Analysis completed, but the page has limited evidence. Treat the summary cautiously.'
+        : 'Analysis completed. Review the strongest signals, severity, and evidence below.',
+      response?.page_summary?.insufficient_evidence ? 'warning' : 'success'
+    );
+    ui.renderComments(getFilteredComments(state.activeFilter), state.activeFilter);
   } catch (error) {
     console.error('Extraction error:', error);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'loader';
-    errorDiv.textContent = `Failed to extract comments: ${error.message}`;
-    const chartContainer = document.querySelector('.chart-container');
-    if (chartContainer) {
-      chartContainer.innerHTML = '';
-      chartContainer.appendChild(errorDiv);
-    }
+    ui.updateStatus(`Analysis failed: ${error.message}`, 'error');
+    ui.renderSummary({
+      comment_count: 0,
+      average_confidence: 0,
+      overall_uncertainty: 'high',
+      insufficient_evidence: true,
+      signal_prevalence: [],
+    });
+    renderChart([]);
+    ui.renderEvidence({});
+    ui.renderComments([], state.activeFilter);
   }
-}
-
-export async function processNextBatch() {
-  const startIdx = state.currentBatch * state.BATCH_SIZE;
-  const endIdx = Math.min(
-    startIdx + state.BATCH_SIZE,
-    state.allExtractedComments.length
-  );
-  const batchComments = state.allExtractedComments.slice(startIdx, endIdx);
-
-  if (batchComments.length === 0) {
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
-      const summary = getSummary();
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
-    return;
-  }
-
-  const totalCount = state.allExtractedComments.length;
-  const currentCount = Math.min(
-    (state.currentBatch + 1) * state.BATCH_SIZE,
-    totalCount
-  );
-  const progress = Math.round((currentCount / totalCount) * 100);
-  ui.showLoader(
-    `Analyzing batch ${
-      state.currentBatch + 1
-    }<br>${currentCount}/${totalCount} comments (${progress}%)`
-  );
-  ui.setLoadMoreState(true);
-
-  const analysisPromises = batchComments.map((comment) => analyzeEmotion(comment.text));
-  const batchResults = await Promise.all(analysisPromises);
-
-  const resultsWithIndex = batchResults.map((result, i) => ({
-    ...result,
-    originalIndex: batchComments[i].originalIndex,
-  }));
-
-  addAnalyzedResults(resultsWithIndex);
-
-  const summary = getSummary();
-  ui.updateSummary(summary);
-  renderChart(summary);
-
-  // Trigger a click on the active filter to re-render the results
-  document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`).click();
-
-  ui.setLoadMoreState(false);
-
-  const remaining = totalCount - endIdx;
-  if (remaining > 0) {
-    ui.toggleLoadMore(true, remaining);
-  } else {
-    ui.toggleLoadMore(false);
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
-  }
-
-  state.currentBatch++;
 }
