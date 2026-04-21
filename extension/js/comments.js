@@ -1,4 +1,4 @@
-import { analyzeEmotion } from './api.js';
+import { analyzeComments } from './api.js';
 import { state, resetState, addAnalyzedResults, getSummary } from './state.js';
 import * as ui from './ui.js';
 import { renderChart } from './chart.js';
@@ -7,6 +7,7 @@ export async function extractAndAnalyze() {
   resetState();
   ui.toggleCommentsContainer(false);
   ui.toggleLoadMore(false);
+  ui.updateSummary(getSummary());
   ui.showLoader('Extracting comments from page...');
 
   const [tab] = await chrome.tabs.query({
@@ -45,8 +46,8 @@ export async function extractAndAnalyze() {
       `Found ${state.allExtractedComments.length} comments. Starting analysis...`
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    processNextBatch();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await processNextBatch();
   } catch (error) {
     console.error('Extraction error:', error);
     const errorDiv = document.createElement('div');
@@ -69,13 +70,12 @@ export async function processNextBatch() {
   const batchComments = state.allExtractedComments.slice(startIdx, endIdx);
 
   if (batchComments.length === 0) {
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
-      const summary = getSummary();
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
+    const summary = getSummary();
+    ui.updateSummary(summary);
+    ui.hideLoader();
+    renderChart(summary);
+    ui.showResultsContainers();
+    document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`)?.click();
     return;
   }
 
@@ -92,37 +92,30 @@ export async function processNextBatch() {
   );
   ui.setLoadMoreState(true);
 
-  const analysisPromises = batchComments.map((comment) => analyzeEmotion(comment.text));
-  const batchResults = await Promise.all(analysisPromises);
+  try {
+    const predictionsByComment = await analyzeComments(
+      batchComments.map((comment) => comment.text)
+    );
+    const resultsWithIndex = predictionsByComment.map((predictions, i) => ({
+      text: batchComments[i].text,
+      predictions,
+      originalIndex: batchComments[i].originalIndex,
+    }));
 
-  const resultsWithIndex = batchResults.map((result, i) => ({
-    ...result,
-    originalIndex: batchComments[i].originalIndex,
-  }));
-
-  addAnalyzedResults(resultsWithIndex);
-
-  const summary = getSummary();
-  ui.updateSummary(summary);
-  renderChart(summary);
-
-  // Trigger a click on the active filter to re-render the results
-  document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`).click();
-
-  ui.setLoadMoreState(false);
-
-  const remaining = totalCount - endIdx;
-  if (remaining > 0) {
-    ui.toggleLoadMore(true, remaining);
-  } else {
-    ui.toggleLoadMore(false);
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
+    addAnalyzedResults(resultsWithIndex);
+  } catch (error) {
+    ui.showLoader(`Analysis failed: ${error.message}`);
+    ui.setLoadMoreState(false);
+    return;
   }
 
   state.currentBatch++;
+
+  const remaining = totalCount - endIdx;
+  if (remaining > 0) {
+    await processNextBatch();
+    return;
+  }
+
+  await processNextBatch();
 }

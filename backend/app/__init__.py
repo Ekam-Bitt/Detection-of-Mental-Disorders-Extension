@@ -1,7 +1,8 @@
-from flask import Flask
-from flask_cors import CORS
 import logging
 import os
+
+from flask import Flask
+from flask_cors import CORS
 
 from .config import AppConfig
 from .inference import load_pipeline

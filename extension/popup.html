@@ -14,58 +14,12 @@
   <body>
     <header>
       <h1>Detection of Mental Disorders</h1>
-      <div class="subtitle">Analyze sentiment in comments</div>
+      <div class="subtitle">
+        Analyze visible social comments with your local model API
+      </div>
     </header>
 
-    <div class="settings-container" style="margin-top: 15px">
-      <div style="font-size: 13px; margin-bottom: 5px; color: #6b7280">
-        API Base URL
-      </div>
-      <div style="display: flex; gap: 8px">
-        <input
-          type="url"
-          id="apiBaseUrl"
-          placeholder="http://localhost:8000"
-          style="
-            flex: 1;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            outline: none;
-            font-family: inherit;
-          "
-        />
-        <button
-          id="saveSettingsBtn"
-          style="
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            background: #3b82f6;
-            color: white;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 500;
-          "
-        >
-          Save
-        </button>
-      </div>
-      <div
-        id="settingsMessage"
-        style="
-          color: #10b981;
-          font-size: 12px;
-          margin-top: 5px;
-          height: 14px;
-          text-align: right;
-        "
-      ></div>
-    </div>
-
-    <button id="analyze" class="analyze-btn" style="margin-top: 20px">
-      Analyze Comments
-    </button>
+    <button id="analyze" class="analyze-btn">Analyze Comments</button>
 
     <div class="summary seven-summary hidden" id="summaryContainer">
       <div class="summary-item">

@@ -1,17 +1,18 @@
 import { DEFAULT_API_BASE_URL, API_TIMEOUT } from '../config.js';
 
-export async function analyzeEmotion(text) {
-  try {
-    const storageResult = await chrome.storage.sync.get(['apiBaseUrl']);
-    const baseUrl = storageResult.apiBaseUrl || DEFAULT_API_BASE_URL;
+export async function analyzeComments(comments) {
+  if (!Array.isArray(comments) || comments.length === 0) {
+    return [];
+  }
 
+  try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze`, {
+    const response = await fetch(`${DEFAULT_API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comments: [text] }),
+      body: JSON.stringify({ comments }),
       signal: controller.signal,
     });
 
@@ -23,9 +24,7 @@ export async function analyzeEmotion(text) {
     }
 
     const data = await response.json();
-    const predictions = data.results?.[0] || [];
-
-    return { text, predictions };
+    return data.results || [];
   } catch (error) {
     console.error('Analysis error:', error);
     throw error;

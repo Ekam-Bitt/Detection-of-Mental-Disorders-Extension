@@ -1,19 +1,31 @@
-import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
-
 (async () => {
+  const MAX_COMMENT_LENGTH = 5000;
+  const MIN_COMMENT_WORDS = 5;
+  const SUPPORTED_DOMAINS = ['youtube.com', 'reddit.com', 'x.com', 'twitter.com'];
   const TIMEOUT = 10000;
 
+  function normalizeText(text) {
+    return text.replace(/\s+/g, ' ').trim().slice(0, MAX_COMMENT_LENGTH);
+  }
+
   function normalizeElements(elements, source) {
+    const seen = new Set();
+
     return Array.from(elements)
-      .map((el, index) => ({
-        text: (el.innerText || '').trim(),
+      .map((el) => normalizeText(el.innerText || el.textContent || ''))
+      .filter((text) => text && text.split(/\s+/).length >= MIN_COMMENT_WORDS)
+      .filter((text) => {
+        const key = text.toLowerCase();
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      })
+      .map((text, index) => ({
+        text,
         originalIndex: index,
         source,
-      }))
-      .filter((item) => item.text && item.text.trim().split(/\s+/).length >= 15)
-      .map((item) => ({
-        ...item,
-        text: item.text.slice(0, MAX_COMMENT_LENGTH),
       }));
   }
 
@@ -31,6 +43,8 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
     'ytd-comment-thread-renderer #content-text',
     'ytd-comment-thread-renderer ytd-comment-renderer #content-text',
     'ytd-comment-view-model #content-text',
+    'ytd-comment-thread-renderer yt-attributed-string#content-text',
+    'ytd-comment-thread-renderer span.yt-core-attributed-string',
   ];
 
   const X_SELECTORS = ["article div[data-testid='tweetText']", 'article div[lang]'];
@@ -50,19 +64,18 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
   }
 
   // ---------- Async Waiter ----------
+  function scanWithSelectors(selectors) {
+    const elements = new Set();
+    selectors.forEach((sel) => {
+      document.querySelectorAll(sel).forEach((el) => elements.add(el));
+    });
+    return elements;
+  }
+
   function waitForComments(selectors, timeout) {
     return new Promise((resolve) => {
-      // Helper to find elements
-      const scan = () => {
-        const elements = new Set();
-        selectors.forEach((sel) => {
-          document.querySelectorAll(sel).forEach((el) => elements.add(el));
-        });
-        return elements;
-      };
-
       // Check immediately
-      let elements = scan();
+      let elements = scanWithSelectors(selectors);
       if (elements.size > 0) {
         resolve(elements);
         return;
@@ -70,7 +83,7 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
 
       // Observe
       const observer = new MutationObserver(() => {
-        elements = scan();
+        elements = scanWithSelectors(selectors);
         if (elements.size > 0) {
           observer.disconnect();
           resolve(elements);
@@ -82,9 +95,24 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
       // Timeout
       setTimeout(() => {
         observer.disconnect();
-        resolve(scan()); // Return whatever we have (maybe empty)
+        resolve(scanWithSelectors(selectors));
       }, timeout);
     });
+  }
+
+  async function ensureYoutubeCommentsVisible() {
+    if (!window.location.hostname.includes('youtube.com')) {
+      return;
+    }
+
+    const commentsSection = document.querySelector('#comments');
+    if (commentsSection) {
+      commentsSection.scrollIntoView({ block: 'start', behavior: 'auto' });
+    } else {
+      window.scrollBy(0, Math.max(window.innerHeight, 800));
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
   }
 
   // ---------- Main Execution ----------
@@ -103,6 +131,8 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
     console.warn(`Mental Disorder Detector: No selectors found for ${host}`);
     return [];
   }
+
+  await ensureYoutubeCommentsVisible();
 
   const foundElements = await waitForComments(selectors, TIMEOUT);
   const source = getSource(host);

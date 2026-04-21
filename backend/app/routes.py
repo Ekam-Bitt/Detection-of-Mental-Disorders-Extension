@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Tuple
-from flask import Blueprint, current_app, jsonify, request, Response
 import logging
+from typing import Any
+
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from .inference import apply_top_k
 
@@ -21,7 +22,7 @@ class ModelError(Exception):
     pass
 
 
-def validate_comments(data: Dict[str, Any]) -> List[str]:
+def validate_comments(data: dict[str, Any]) -> list[str]:
     if not data or "comments" not in data:
         raise ValidationError("'comments' field is required")
 
@@ -46,7 +47,7 @@ def validate_comments(data: Dict[str, Any]) -> List[str]:
 
 
 @api_bp.route("/analyze", methods=["POST"])
-def analyze_sentiment() -> Tuple[Response, int]:
+def analyze_sentiment() -> tuple[Response, int]:
     try:
         data = request.get_json()
         comments = validate_comments(data)
@@ -93,7 +94,7 @@ def analyze_sentiment() -> Tuple[Response, int]:
 
 def register_health(app):
     @app.route("/health", methods=["GET"])
-    def health_check() -> Tuple[Response, int]:
+    def health_check() -> tuple[Response, int]:
         pipeline = current_app.config.get("SENTIMENT_PIPELINE")
         model_status = "loaded" if pipeline else "not_loaded"
 
