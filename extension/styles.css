@@ -336,3 +336,82 @@ h1 {
 }
 
 /* API key UI removed; related styles were deleted. */
+
+/* Shield Mode Styles */
+.shield-settings {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 20px;
+  width: calc(100% - 40px);
+}
+
+.shield-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.shield-toggle label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.shield-toggle input[type='checkbox'] {
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.threshold-slider {
+  margin-top: 12px;
+}
+
+.threshold-slider label {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.threshold-slider input[type='range'] {
+  width: 100%;
+  cursor: pointer;
+}
+
+.shielded {
+  filter: blur(8px);
+  position: relative;
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+.shielded.revealed {
+  filter: none;
+  pointer-events: auto;
+}
+
+.shield-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.shielded:hover .shield-overlay {
+  background: rgba(0, 0, 0, 0.9);
+}
