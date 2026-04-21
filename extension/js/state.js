@@ -1,64 +1,30 @@
-import { LABELS, LABEL_ORDER, BATCH_SIZE } from '../config.js';
-
 export const state = {
-  analyzedResults: [],
-  topComments: {},
-  allExtractedComments: [],
-  currentBatch: 0,
-  BATCH_SIZE,
+  analysisResponse: null,
   activeFilter: 'all',
+  lastRunMeta: null,
 };
 
 export function resetState() {
-  state.analyzedResults = [];
-  state.topComments = {};
-  LABEL_ORDER.forEach((label) => {
-    state.topComments[label] = null;
-  });
-  state.allExtractedComments = [];
-  state.currentBatch = 0;
+  state.analysisResponse = null;
+  state.lastRunMeta = null;
+  state.activeFilter = 'all';
 }
 
-export function addAnalyzedResults(results) {
-  state.analyzedResults.push(...results);
-  updateTopComments(results);
+export function setAnalysisResponse(response, meta = {}) {
+  state.analysisResponse = response;
+  state.lastRunMeta = meta;
 }
 
-function updateTopComments(batchResults) {
-  batchResults.forEach((result) => {
-    if (result.predictions && result.predictions.length > 0) {
-      const topPrediction = result.predictions.reduce((prev, current) =>
-        prev.score > current.score ? prev : current
-      );
-      const label = topPrediction.label;
-      if (
-        !state.topComments[label] ||
-        topPrediction.score > state.topComments[label].score
-      ) {
-        state.topComments[label] = {
-          text: result.text,
-          score: topPrediction.score,
-          originalIndex: result.originalIndex,
-        };
-      }
-    }
-  });
+export function getAnalyzedComments() {
+  return state.analysisResponse?.comments || [];
 }
 
-export function getSummary() {
-  const summary = {};
-  LABEL_ORDER.forEach((label) => {
-    summary[label] = 0;
-  });
-
-  state.analyzedResults.forEach(({ predictions }) => {
-    if (!predictions || predictions.length === 0) return;
-    const top = predictions.reduce((prev, current) =>
-      prev.score > current.score ? prev : current
-    );
-    if (summary.hasOwnProperty(top.label)) {
-      summary[top.label]++;
-    }
-  });
-  return summary;
+export function getFilteredComments(filter = state.activeFilter) {
+  const comments = getAnalyzedComments();
+  if (filter === 'all') {
+    return comments;
+  }
+  return comments
+    .filter((comment) => comment.top_signal?.key === filter)
+    .sort((a, b) => (b.top_signal?.score || 0) - (a.top_signal?.score || 0));
 }

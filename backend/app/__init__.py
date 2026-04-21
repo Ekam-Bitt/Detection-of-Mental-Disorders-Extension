@@ -1,11 +1,13 @@
-from flask import Flask
-from flask_cors import CORS
 import logging
 import os
+
+from flask import Flask
+from flask_cors import CORS
 
 from .config import AppConfig
 from .inference import load_pipeline
 from .routes import api_bp, register_health
+from .v2.inference import load_signal_analyzer_v2
 
 
 def create_app() -> Flask:
@@ -29,6 +31,9 @@ def create_app() -> Flask:
 
     sentiment_pipeline = load_pipeline(config)
     app.config["SENTIMENT_PIPELINE"] = sentiment_pipeline
+    app.config["SIGNAL_PIPELINE_V2"] = load_signal_analyzer_v2(
+        config, sentiment_pipeline
+    )
 
     app.register_blueprint(api_bp)
     register_health(app)
