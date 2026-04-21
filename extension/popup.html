@@ -21,6 +21,19 @@
       Analyze Comments
     </button>
 
+    <div class="shield-settings" id="shieldSettings">
+      <div class="shield-toggle">
+        <label for="shieldMode">Shield Mode</label>
+        <input type="checkbox" id="shieldMode" />
+      </div>
+      <div class="threshold-slider hidden" id="thresholdContainer">
+        <label for="thresholdSlider"
+          >Toxicity Threshold: <span id="thresholdValue">30%</span></label
+        >
+        <input type="range" id="thresholdSlider" min="0" max="100" value="30" />
+      </div>
+    </div>
+
     <div class="summary seven-summary hidden" id="summaryContainer">
       <div class="summary-item">
         <div class="summary-number" id="summary-LABEL_0">0</div>
