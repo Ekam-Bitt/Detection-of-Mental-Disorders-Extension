@@ -1,4 +1,9 @@
-import { LABELS, LABEL_ORDER, BATCH_SIZE } from '../config.js';
+import {
+  LABELS,
+  LABEL_ORDER,
+  BATCH_SIZE,
+  DEFAULT_SHIELD_THRESHOLD,
+} from '../config.js';
 
 export const state = {
   analyzedResults: [],
@@ -7,6 +12,8 @@ export const state = {
   currentBatch: 0,
   BATCH_SIZE,
   activeFilter: 'all',
+  shieldEnabled: false,
+  shieldThreshold: DEFAULT_SHIELD_THRESHOLD,
 };
 
 export function resetState() {
@@ -17,6 +24,8 @@ export function resetState() {
   });
   state.allExtractedComments = [];
   state.currentBatch = 0;
+  state.shieldEnabled = false;
+  state.shieldThreshold = DEFAULT_SHIELD_THRESHOLD;
 }
 
 export function addAnalyzedResults(results) {
