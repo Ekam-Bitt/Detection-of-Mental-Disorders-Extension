@@ -15,9 +15,16 @@
   const TIMEOUT = 10000;
 
   function normalizeElements(elements, source) {
-    return Array.from(elements)
-      .map((el, index) => ({
-        text: (el.innerText || '').trim(),
+    const elementsWithPosition = Array.from(elements).map((el) => ({
+      element: el,
+      position: getNodePosition(el),
+    }));
+
+    elementsWithPosition.sort((a, b) => a.position - b.position);
+
+    return elementsWithPosition
+      .map(({ element }, index) => ({
+        text: (element.innerText || '').trim(),
         originalIndex: index,
         source,
       }))
@@ -26,6 +33,13 @@
         ...item,
         text: item.text.slice(0, MAX_COMMENT_LENGTH),
       }));
+  }
+
+  function getNodePosition(node) {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rect = range.getBoundingClientRect();
+    return rect.top * document.body.scrollWidth + rect.left;
   }
 
   // ---------- Selectors ----------
