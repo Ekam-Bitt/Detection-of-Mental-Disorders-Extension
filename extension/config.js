@@ -3,6 +3,8 @@ export const API_TIMEOUT = 60000;
 export const MAX_COMMENT_LENGTH = 5000;
 export const MAX_COMMENTS_PER_REQUEST = 100;
 export const BATCH_SIZE = 30;
+export const DEFAULT_SHIELD_THRESHOLD = 0.3;
+export const SHIELD_STORAGE_KEY = 'shieldSettings';
 export const SUPPORTED_DOMAINS = [
   'youtube.com',
   'www.youtube.com',
