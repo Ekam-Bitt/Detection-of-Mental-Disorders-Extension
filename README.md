@@ -47,6 +47,7 @@ _Note: On the first run, it will download the ML model (~500MB) from Hugging Fac
 - **Privacy First**: All analysis is done via a secure backend API; no data is stored permanently.
 - **7 Emotion Categories**: Detects ADHD, Anxiety, Autism, BPD, Depression, PTSD, and Normal/Neutral states.
 - **Visual Insights**: Displays a breakdown of detected emotions in a clean, easy-to-read chart.
+- **Shield Mode**: Automatically blurs toxic or distressing comments based on a customizable toxicity threshold. Click blurred comments to reveal them temporarily.
 
 ## 🛠️ Tech Stack
 
@@ -60,6 +61,19 @@ _Note: On the first run, it will download the ML model (~500MB) from Hugging Fac
 1.  Navigate to a **YouTube** video, **Reddit** thread, or **X (Twitter)** post with comments.
 2.  Click the **Detection of Mental Disorders** icon in your browser toolbar.
 3.  The extension will analyze the visible text and display a pie chart of the detected emotions.
+
+### 🛡️ Shield Mode
+
+Shield Mode helps protect your mental well-being by automatically hiding comments that may contain toxic or distressing content.
+
+1.  Enable **Shield Mode** using the checkbox in the extension popup.
+2.  Adjust the **Toxicity Threshold** slider (0-100%):
+    - **Lower values** = only very toxic comments are hidden
+    - **Higher values** = more comments are hidden
+3.  Comments with toxicity scores below the threshold appear blurred.
+4.  Click any blurred comment to reveal it temporarily.
+
+Settings persist across sessions.
 
 ## 🧠 Model Details
 
