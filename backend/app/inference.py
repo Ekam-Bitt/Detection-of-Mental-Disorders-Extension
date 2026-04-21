@@ -17,8 +17,13 @@ def load_pipeline(config) -> any:
     model_path = config.model_path
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_path)
+        sess_options = ort.SessionOptions()
+        sess_options.intra_op_num_threads = 2
+        sess_options.inter_op_num_threads = 1
+        sess_options.log_severity_level = 3  # suppress ONNX warnings
         session = ort.InferenceSession(
             f"{model_path}/model.onnx",
+            sess_options=sess_options,
             providers=["CPUExecutionProvider"],
         )
 

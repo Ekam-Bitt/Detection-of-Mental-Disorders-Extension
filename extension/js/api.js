@@ -31,3 +31,37 @@ export async function analyzeEmotion(text) {
     throw error;
   }
 }
+
+/**
+ * Send an entire batch of comments in a single API request.
+ * Returns an array of { text, predictions } in the same order as the input.
+ */
+export async function analyzeBatch(texts) {
+  const storageResult = await chrome.storage.sync.get(['apiBaseUrl']);
+  const baseUrl = storageResult.apiBaseUrl || DEFAULT_API_BASE_URL;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comments: texts }),
+    signal: controller.signal,
+  });
+
+  clearTimeout(timeoutId);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const results = data.results || [];
+
+  return texts.map((text, i) => ({
+    text,
+    predictions: results[i] || [],
+  }));
+}

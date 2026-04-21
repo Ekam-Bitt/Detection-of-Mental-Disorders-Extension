@@ -1,4 +1,4 @@
-import { analyzeEmotion } from './api.js';
+import { analyzeBatch } from './api.js';
 import { state, resetState, addAnalyzedResults, getSummary } from './state.js';
 import * as ui from './ui.js';
 import { renderChart } from './chart.js';
@@ -6,7 +6,6 @@ import { renderChart } from './chart.js';
 export async function extractAndAnalyze() {
   resetState();
   ui.toggleCommentsContainer(false);
-  ui.toggleLoadMore(false);
   ui.showLoader('Extracting comments from page...');
 
   const [tab] = await chrome.tabs.query({
@@ -46,83 +45,67 @@ export async function extractAndAnalyze() {
     );
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    processNextBatch();
+
+    // Auto-process all batches sequentially
+    await processAllBatches();
   } catch (error) {
     console.error('Extraction error:', error);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'loader';
-    errorDiv.textContent = `Failed to extract comments: ${error.message}`;
-    const chartContainer = document.querySelector('.chart-container');
-    if (chartContainer) {
-      chartContainer.innerHTML = '';
-      chartContainer.appendChild(errorDiv);
-    }
+    ui.showLoader(`Failed to extract comments: ${error.message}`);
   }
 }
 
-export async function processNextBatch() {
-  const startIdx = state.currentBatch * state.BATCH_SIZE;
-  const endIdx = Math.min(
-    startIdx + state.BATCH_SIZE,
-    state.allExtractedComments.length
-  );
-  const batchComments = state.allExtractedComments.slice(startIdx, endIdx);
+async function processAllBatches() {
+  const totalCount = state.allExtractedComments.length;
 
-  if (batchComments.length === 0) {
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
+  while (true) {
+    const startIdx = state.currentBatch * state.BATCH_SIZE;
+    const endIdx = Math.min(startIdx + state.BATCH_SIZE, totalCount);
+    const batchComments = state.allExtractedComments.slice(startIdx, endIdx);
+
+    if (batchComments.length === 0) break;
+
+    const currentCount = Math.min(endIdx, totalCount);
+    const progress = Math.round((currentCount / totalCount) * 100);
+
+    ui.showLoader(
+      `Analyzing batch ${
+        state.currentBatch + 1
+      }<br>${currentCount}/${totalCount} comments (${progress}%)`
+    );
+
+    try {
+      const texts = batchComments.map((c) => c.text);
+      const batchResults = await analyzeBatch(texts);
+
+      const resultsWithIndex = batchResults.map((result, i) => ({
+        ...result,
+        originalIndex: batchComments[i].originalIndex,
+      }));
+
+      addAnalyzedResults(resultsWithIndex);
+      state.currentBatch++;
+
+      // Update summary counts after each batch
       const summary = getSummary();
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
-    return;
+      ui.updateSummary(summary);
+    } catch (error) {
+      console.error('Batch analysis error:', error);
+      const message =
+        error.name === 'AbortError'
+          ? 'Request timed out. The server may be overloaded — try again.'
+          : `Analysis failed: ${error.message}`;
+      ui.showLoader(`❌ ${message}`);
+      return;
+    }
   }
 
-  const totalCount = state.allExtractedComments.length;
-  const currentCount = Math.min(
-    (state.currentBatch + 1) * state.BATCH_SIZE,
-    totalCount
-  );
-  const progress = Math.round((currentCount / totalCount) * 100);
-  ui.showLoader(
-    `Analyzing batch ${
-      state.currentBatch + 1
-    }<br>${currentCount}/${totalCount} comments (${progress}%)`
-  );
-  ui.setLoadMoreState(true);
-
-  const analysisPromises = batchComments.map((comment) => analyzeEmotion(comment.text));
-  const batchResults = await Promise.all(analysisPromises);
-
-  const resultsWithIndex = batchResults.map((result, i) => ({
-    ...result,
-    originalIndex: batchComments[i].originalIndex,
-  }));
-
-  addAnalyzedResults(resultsWithIndex);
-
+  // All batches done — render final results
   const summary = getSummary();
   ui.updateSummary(summary);
+  ui.hideLoader();
   renderChart(summary);
+  ui.showResultsContainers();
 
-  // Trigger a click on the active filter to re-render the results
-  document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`).click();
-
-  ui.setLoadMoreState(false);
-
-  const remaining = totalCount - endIdx;
-  if (remaining > 0) {
-    ui.toggleLoadMore(true, remaining);
-  } else {
-    ui.toggleLoadMore(false);
-    ui.showLoader('Analysis complete!');
-    setTimeout(() => {
-      ui.hideLoader();
-      renderChart(summary);
-      ui.showResultsContainers();
-    }, 1500);
-  }
-
-  state.currentBatch++;
+  // Show all results by default
+  document.querySelector(`.filter-btn[data-filter="${state.activeFilter}"]`)?.click();
 }

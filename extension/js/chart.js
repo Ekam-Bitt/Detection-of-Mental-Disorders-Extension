@@ -6,21 +6,20 @@ export function renderChart(summary) {
   const chartContainer = document.querySelector('.chart-container');
   if (!chartContainer) return;
 
-  const existingCanvas = document.getElementById('sentimentChart');
-  if (existingCanvas) {
-    existingCanvas.remove();
+  // Destroy existing chart instance first
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
   }
+
+  // Clear the entire container (removes loader, old canvases, everything)
+  chartContainer.innerHTML = '';
 
   const canvas = document.createElement('canvas');
   canvas.id = 'sentimentChart';
   chartContainer.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
-
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
 
   const labelNames = LABEL_ORDER.map((label) => LABELS[label].name);
   const colors = LABEL_ORDER.map((label) => LABELS[label].color);
@@ -40,7 +39,7 @@ export function renderChart(summary) {
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
       plugins: {
         legend: {
           position: 'bottom',

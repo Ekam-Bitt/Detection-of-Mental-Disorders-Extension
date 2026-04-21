@@ -16,13 +16,13 @@ export const SUPPORTED_DOMAINS = [
   'www.twitter.com',
 ];
 export const LABELS = {
-  LABEL_0: { name: 'ADHD', color: '#3b82f6' },
-  LABEL_1: { name: 'Anxiety', color: '#10b981' },
-  LABEL_2: { name: 'Autism', color: '#f59e0b' },
-  LABEL_3: { name: 'BPD', color: '#dc2626' },
-  LABEL_4: { name: 'Depression', color: '#6366f1' },
-  LABEL_5: { name: 'PTSD', color: '#8b5cf6' },
-  LABEL_6: { name: 'Normal', color: '#6b7280' },
+  LABEL_0: { name: 'ADHD', color: '#0ea5e9' },
+  LABEL_1: { name: 'Anxiety', color: '#f97316' },
+  LABEL_2: { name: 'Autism', color: '#eab308' },
+  LABEL_3: { name: 'BPD', color: '#ec4899' },
+  LABEL_4: { name: 'Depression', color: '#7c3aed' },
+  LABEL_5: { name: 'PTSD', color: '#ef4444' },
+  LABEL_6: { name: 'Normal', color: '#22c55e' },
 };
 export const LABEL_ORDER = [
   'LABEL_0',

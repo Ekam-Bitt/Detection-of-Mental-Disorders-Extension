@@ -104,7 +104,6 @@
   const isSupported = SUPPORTED_DOMAINS.some((domain) => host.includes(domain));
 
   if (!isSupported) {
-    console.warn(`Mental Disorder Detector: ${host} is not a supported domain`);
     return [];
   }
 
