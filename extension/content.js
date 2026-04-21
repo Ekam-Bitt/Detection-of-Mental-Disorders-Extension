@@ -1,6 +1,17 @@
-import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
-
 (async () => {
+  const MAX_COMMENT_LENGTH = 5000;
+  const SUPPORTED_DOMAINS = [
+    'youtube.com',
+    'www.youtube.com',
+    'reddit.com',
+    'www.reddit.com',
+    'old.reddit.com',
+    'new.reddit.com',
+    'x.com',
+    'www.x.com',
+    'twitter.com',
+    'www.twitter.com',
+  ];
   const TIMEOUT = 10000;
 
   function normalizeElements(elements, source) {

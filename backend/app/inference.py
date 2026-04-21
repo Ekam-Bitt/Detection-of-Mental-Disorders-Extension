@@ -1,52 +1,70 @@
 import logging
 from typing import List
 
-try:
-    import torch
-except Exception:
-    torch = None
-
-from transformers import pipeline
+import numpy as np
+import onnxruntime as ort
+from transformers import AutoTokenizer
 
 
-def _select_device() -> int:
-    if torch is None:
-        return -1
-    try:
-        if torch.cuda.is_available():
-            return 0
-    except Exception:
-        pass
-    return -1
+def _softmax(logits: np.ndarray) -> np.ndarray:
+    exp = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
+    return exp / exp.sum(axis=-1, keepdims=True)
 
 
 def load_pipeline(config) -> any:
     logger = logging.getLogger("api")
 
-    if torch is not None:
-        try:
-            torch.set_num_threads(int(config.torch_num_threads))
-        except Exception:
-            pass
-
-    device = _select_device()
+    model_path = config.model_path
     try:
-        clf = pipeline(
-            "text-classification",
-            model=config.model_path,
-            tokenizer=config.model_path,
-            device=device,
-            top_k=None,
-            truncation=True,
-            padding=True,
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        session = ort.InferenceSession(
+            f"{model_path}/model.onnx",
+            providers=["CPUExecutionProvider"],
         )
-        logger.info(
-            f"Model loaded from: {config.model_path} "
-            f"on device: {'cuda:0' if device == 0 else 'cpu'}"
-        )
-        return clf
+
+        # Read label mapping from config.json
+        import json
+        from pathlib import Path
+
+        config_file = Path(model_path) / "config.json"
+        id2label = {}
+        if config_file.exists():
+            with open(config_file) as f:
+                model_config = json.load(f)
+                id2label = model_config.get("id2label", {})
+
+        logger.info(f"ONNX model loaded from: {model_path}")
+
+        def predict(texts: List[str]) -> List[List[dict]]:
+            inputs = tokenizer(
+                texts,
+                return_tensors="np",
+                truncation=True,
+                padding=True,
+                max_length=512,
+            )
+            ort_inputs = {
+                k: v
+                for k, v in inputs.items()
+                if k in [inp.name for inp in session.get_inputs()]
+            }
+            logits = session.run(None, ort_inputs)[0]
+            probs = _softmax(logits)
+
+            results = []
+            for row in probs:
+                labels = []
+                for idx, score in enumerate(row):
+                    label = id2label.get(str(idx), f"LABEL_{idx}")
+                    labels.append({"label": label, "score": float(score)})
+                labels.sort(key=lambda x: x["score"], reverse=True)
+                results.append(labels)
+            return results
+
+        return predict
+
     except Exception as e:
-        logger.exception(f"Error loading model: {e}")
+        logger.exception(f"Error loading ONNX model: {e}")
         return None
 
 
