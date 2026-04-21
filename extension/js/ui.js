@@ -1,4 +1,5 @@
 import { LABELS, LABEL_ORDER } from '../config.js';
+import { isShielded } from './shield.js';
 
 const SELECTORS = {
   filterBtns: '.filter-btn',
@@ -95,6 +96,22 @@ function createCommentElement(result, topComments, filter) {
   const topColor = LABEL_INFO[topPrediction.label]?.color || '#ddd';
   commentDiv.className = `comment`;
   commentDiv.style.borderLeft = `5px solid ${topColor}`;
+
+  // Apply shield effect
+  if (isShielded(topPrediction.score)) {
+    commentDiv.classList.add('shielded');
+    commentDiv.dataset.shielded = 'true';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'shield-overlay';
+    overlay.textContent = 'Click to reveal';
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      commentDiv.classList.add('revealed');
+      overlay.style.display = 'none';
+    });
+    commentDiv.appendChild(overlay);
+  }
 
   const topCommentForLabel = topComments[topPrediction.label];
   const isTopComment =
