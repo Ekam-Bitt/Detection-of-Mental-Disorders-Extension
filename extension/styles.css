@@ -385,13 +385,17 @@ h1 {
 }
 
 .shielded {
-  filter: blur(8px);
   position: relative;
-  pointer-events: none;
-  transition: filter 0.3s ease;
 }
 
-.shielded.revealed {
+.shielded .shield-content {
+  filter: blur(8px);
+  pointer-events: none;
+  transition: filter 0.3s ease;
+  user-select: none;
+}
+
+.shielded.revealed .shield-content {
   filter: none;
   pointer-events: auto;
 }

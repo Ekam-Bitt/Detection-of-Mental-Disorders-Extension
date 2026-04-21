@@ -97,22 +97,6 @@ function createCommentElement(result, topComments, filter) {
   commentDiv.className = `comment`;
   commentDiv.style.borderLeft = `5px solid ${topColor}`;
 
-  // Apply shield effect
-  if (isShielded(topPrediction.score)) {
-    commentDiv.classList.add('shielded');
-    commentDiv.dataset.shielded = 'true';
-
-    const overlay = document.createElement('div');
-    overlay.className = 'shield-overlay';
-    overlay.textContent = 'Click to reveal';
-    overlay.addEventListener('click', (e) => {
-      e.stopPropagation();
-      commentDiv.classList.add('revealed');
-      overlay.style.display = 'none';
-    });
-    commentDiv.appendChild(overlay);
-  }
-
   const topCommentForLabel = topComments[topPrediction.label];
   const isTopComment =
     topCommentForLabel && result.originalIndex === topCommentForLabel.originalIndex;
@@ -120,7 +104,6 @@ function createCommentElement(result, topComments, filter) {
   const commentText = document.createElement('div');
   commentText.className = 'comment-text';
   commentText.textContent = result.text;
-  commentDiv.appendChild(commentText);
 
   const sentimentBarsContainer = document.createElement('div');
   sentimentBarsContainer.className = 'sentiment-bars';
@@ -145,15 +128,39 @@ function createCommentElement(result, topComments, filter) {
     sentimentBarsContainer.appendChild(barDiv);
   });
 
-  commentDiv.appendChild(sentimentBarsContainer);
-
+  let badge = null;
   if (isTopComment && filter !== 'all') {
     const human = LABEL_INFO[topPrediction.label]?.name || topPrediction.label;
-    const badge = document.createElement('div');
+    badge = document.createElement('div');
     badge.className = 'top-badge';
     badge.textContent = `Top ${human}`;
     badge.style.backgroundColor = topColor;
-    commentDiv.appendChild(badge);
+  }
+
+  if (isShielded(topPrediction.score)) {
+    commentDiv.classList.add('shielded');
+    commentDiv.dataset.shielded = 'true';
+
+    const shieldContent = document.createElement('div');
+    shieldContent.className = 'shield-content';
+    shieldContent.appendChild(commentText);
+    shieldContent.appendChild(sentimentBarsContainer);
+    if (badge) shieldContent.appendChild(badge);
+    commentDiv.appendChild(shieldContent);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'shield-overlay';
+    overlay.textContent = 'Click to reveal';
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      commentDiv.classList.add('revealed');
+      overlay.style.display = 'none';
+    });
+    commentDiv.appendChild(overlay);
+  } else {
+    commentDiv.appendChild(commentText);
+    commentDiv.appendChild(sentimentBarsContainer);
+    if (badge) commentDiv.appendChild(badge);
   }
 
   return commentDiv;
