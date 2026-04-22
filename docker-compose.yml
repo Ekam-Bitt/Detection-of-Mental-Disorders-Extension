@@ -3,20 +3,21 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    platform: linux/arm64
     ports:
       - "8000:8000"
     environment:
-      - MODEL_ID=ekam28/emotion-detector
-      - HF_HOME=/app/model_cache
-    volumes:
-      - model_cache:/app/model_cache
+      - MODEL_PATH=/app/onnx_model_quantized
+      - WELLBEING_DB_PATH=/app/data/wellbeing.db
     networks:
       - mental-health-net
     restart: unless-stopped
+    volumes:
+      - wellbeing-data:/app/data
 
 networks:
   mental-health-net:
     driver: bridge
 
 volumes:
-  model_cache:
+  wellbeing-data:

@@ -64,10 +64,13 @@ docker-compose.override.yml
 # Model cache
 backend/app/model_cache/
 backend/model_files/
+backend/onnx_model/
+backend/onnx_model_quantized/
 *.bin
 *.pt
 *.pth
 *.safetensors
+*.onnx
 
 # Node
 node_modules/

@@ -1,0 +1,139 @@
+.mwg-shielded {
+  position: relative !important;
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.mwg-shielded::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  backdrop-filter: blur(8px) saturate(0.8);
+  -webkit-backdrop-filter: blur(8px) saturate(0.8);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: inherit;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.mwg-shielded::after {
+  content: attr(data-mwg-badge);
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.84);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Buttons, links, and interactive elements sit above the blur overlay */
+.mwg-shielded button,
+.mwg-shielded a,
+.mwg-shielded [role='button'],
+.mwg-shielded input,
+.mwg-shielded summary,
+.mwg-shielded faceplate-partial,
+.mwg-shielded shreddit-comment-action-row {
+  position: relative;
+  z-index: 2;
+}
+
+.mwg-shielded.mwg-revealed::before {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mwg-shielded.mwg-revealed {
+  user-select: text;
+}
+
+.mwg-shielded.mwg-revealed::after {
+  display: none;
+}
+
+.mwg-floating-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 999999;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #102a2e;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(18px);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.mwg-panel-kicker {
+  margin-bottom: 8px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mwg-floating-panel h3 {
+  margin: 0 0 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.mwg-floating-panel p,
+.mwg-support-footnote {
+  margin: 0;
+  color: #4f6b70;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mwg-panel-actions,
+.mwg-support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mwg-primary,
+.mwg-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  text-decoration: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mwg-primary {
+  background: linear-gradient(135deg, #115e59, #0f766e);
+  color: #ffffff;
+}
+
+.mwg-secondary {
+  background: rgba(15, 23, 42, 0.06);
+  color: #244247;
+}
+
+.mwg-support-footnote {
+  margin-top: 14px;
+}

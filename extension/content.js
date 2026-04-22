@@ -1,12 +1,30 @@
-import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
-
 (async () => {
+  const MAX_COMMENT_LENGTH = 5000;
+  const SUPPORTED_DOMAINS = [
+    'youtube.com',
+    'www.youtube.com',
+    'reddit.com',
+    'www.reddit.com',
+    'old.reddit.com',
+    'new.reddit.com',
+    'x.com',
+    'www.x.com',
+    'twitter.com',
+    'www.twitter.com',
+  ];
   const TIMEOUT = 10000;
 
   function normalizeElements(elements, source) {
-    return Array.from(elements)
-      .map((el, index) => ({
-        text: (el.innerText || '').trim(),
+    const elementsWithPosition = Array.from(elements).map((el) => ({
+      element: el,
+      position: getNodePosition(el),
+    }));
+
+    elementsWithPosition.sort((a, b) => a.position - b.position);
+
+    return elementsWithPosition
+      .map(({ element }, index) => ({
+        text: (element.innerText || '').trim(),
         originalIndex: index,
         source,
       }))
@@ -15,6 +33,13 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
         ...item,
         text: item.text.slice(0, MAX_COMMENT_LENGTH),
       }));
+  }
+
+  function getNodePosition(node) {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rect = range.getBoundingClientRect();
+    return rect.top * document.body.scrollWidth + rect.left;
   }
 
   // ---------- Selectors ----------
@@ -93,7 +118,6 @@ import { MAX_COMMENT_LENGTH, SUPPORTED_DOMAINS } from './config.js';
   const isSupported = SUPPORTED_DOMAINS.some((domain) => host.includes(domain));
 
   if (!isSupported) {
-    console.warn(`Mental Disorder Detector: ${host} is not a supported domain`);
     return [];
   }
 

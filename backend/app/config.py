@@ -1,23 +1,27 @@
 import os
+from pathlib import Path
 
 
 class AppConfig:
-    def __init__(self, model_path: str, top_k: int, torch_num_threads: int):
+    def __init__(self, model_path: str, top_k: int, wellbeing_db_path: str):
         self.model_path = model_path
         self.top_k = top_k
-        self.torch_num_threads = torch_num_threads
+        self.wellbeing_db_path = wellbeing_db_path
 
     @staticmethod
     def from_env() -> "AppConfig":
+        default_db_path = (
+            Path(__file__).resolve().parent.parent / "data" / "wellbeing.db"
+        )
         return AppConfig(
-            model_path=os.getenv("MODEL_ID", "ekam28/emotion-detector"),
+            model_path=os.getenv("MODEL_PATH", "onnx_model_quantized"),
             top_k=int(os.getenv("TOP_K", "7")),
-            torch_num_threads=int(os.getenv("TORCH_NUM_THREADS", "1")),
+            wellbeing_db_path=os.getenv("WELLBEING_DB_PATH", str(default_db_path)),
         )
 
     def to_flask_config(self) -> dict:
         return {
             "MODEL_PATH": self.model_path,
             "TOP_K": self.top_k,
-            "TORCH_NUM_THREADS": self.torch_num_threads,
+            "WELLBEING_DB_PATH": self.wellbeing_db_path,
         }
