@@ -98,6 +98,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'GET_CURRENT_SESSION') {
+    const session = activeTabId ? tabSessions.get(activeTabId) : null;
+    sendResponse({ ok: true, session: session || null });
+    return true;
+  }
+
   return false;
 });
 
@@ -133,6 +139,7 @@ function getOrCreateSession(tabId) {
       toxicRatio: 0,
       totalComments: 0,
       lastActivatedAt: null,
+      latestMetrics: null,
     });
   }
 
@@ -245,6 +252,7 @@ async function handleAnalyzePageSample(payload, sender) {
     session.riskScore = metrics.averageRisk;
     session.toxicRatio = metrics.toxicRatio;
     session.totalComments = metrics.totalComments;
+    session.latestMetrics = metrics;
   }
 
   return {

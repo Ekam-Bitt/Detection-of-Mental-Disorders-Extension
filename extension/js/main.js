@@ -1,5 +1,5 @@
 import { extractAndAnalyze } from './comments.js';
-import { state } from './state.js';
+import { addAnalyzedResults, resetState, state } from './state.js';
 import * as ui from './ui.js';
 import { getApiBaseUrl } from './backend-api.js';
 import { loadShieldSettings, setShieldMode, setThreshold } from './shield.js';
@@ -23,7 +23,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindFilters();
   bindAnalyzeButton();
   bindOpenHub();
+
+  await checkExistingAnalysis();
 });
+
+async function checkExistingAnalysis() {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'GET_CURRENT_SESSION' });
+    if (response?.ok && response.session?.latestMetrics) {
+      resetState();
+      addAnalyzedResults(response.session.latestMetrics.results);
+      currentAnalysis = {
+        metrics: response.session.latestMetrics,
+        topComments: state.topComments,
+      };
+      rerenderAnalysis();
+    }
+  } catch (error) {
+    console.error('Failed to check existing analysis:', error);
+  }
+}
 
 async function refreshDashboard() {
   try {
