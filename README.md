@@ -13,20 +13,20 @@ A privacy-first, local-only wellbeing platform that combines a **web dashboard**
 The project is organized into three product surfaces that share a single backend and data store:
 
 ```
-┌───────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────┐
 │                     Local Backend (Flask)                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
-│  │ ONNX Runtime │  │ Wellbeing    │  │ Product Web Hub     │  │
+│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────────┐  │
+│  │ ONNX Runtime │  │  Wellbeing    │  │ Product Web Hub     │  │
 │  │ Inference    │  │ Store (SQLite)│  │ (Jinja templates +  │  │
-│  │ Engine       │  │              │  │  static JS/CSS)     │  │
-│  └──────┬───────┘  └──────┬───────┘  └─────────┬───────────┘  │
+│  │ Engine       │  │               │  │  static JS/CSS)     │  │
+│  └──────┬───────┘  └──────┬────────┘  └─────────┬───────────┘  │
 │         │                 │                     │              │
 │         └────────┬────────┘                     │              │
 │                  ▼                              ▼              │
 │            REST API (/api/*)              Web Hub (/)          │
-└─────────────┬───────────────────────────────┬─────────────────┘
-              │                               │
-   ┌──────────▼──────────┐        ┌───────────▼──────────┐
+└─────────────┬────────────────────────────────┬─────────────────┘
+              │                                │
+   ┌──────────▼───────────┐        ┌───────────▼──────────┐
    │   Chrome Extension   │        │   Browser (Hub UI)   │
    │  • Page monitor      │        │  • Dashboard         │
    │  • Shield mode       │        │  • Self-check        │
