@@ -4,7 +4,7 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/docker-build.yml?label=build)
 ![GitHub License](https://img.shields.io/github/license/Ekam-Bitt/Detection-of-Mental-Disorders-Extension)
 
-A privacy-first, local-only wellbeing platform that combines a **web dashboard**, a **self-analysis tool**, and a **Chrome extension** into a single unified product. Powered by a quantized ONNX RoBERTa model that runs entirely on your machine — no cloud, no telemetry, no external data sharing.
+A privacy-first, local-only wellbeing platform that combines a **web dashboard**, a **self-analysis tool**, and a **Chrome extension** into a single unified product. It runs a quantized ONNX RoBERTa model entirely on your machine — no cloud, no telemetry, no external data sharing.
 
 ---
 
@@ -70,7 +70,7 @@ Or download the [latest release](https://github.com/Ekam-Bitt/Detection-of-Menta
 docker compose up --build
 ```
 
-The first build takes a few minutes (Python deps + ~120 MB quantized ONNX model). Subsequent starts are near-instant.
+The first build takes a few minutes for Python dependency installation. On first Docker startup, the app downloads the quantized ONNX runtime model and caches it in a persistent Docker volume for reuse.
 
 ### 3. Open the web hub
 
@@ -87,6 +87,8 @@ Navigate to **[http://localhost:8000](http://localhost:8000)** in your browser. 
 3. Click **Load unpacked** → select the `extension/` folder from this repo
 
 The extension icon appears in the toolbar. It will automatically monitor supported sites in the background.
+
+For local development commands, formatting, and backend test workflow, see [DEVELOPMENT.md](/Users/ekambitt/Projects/Detection-of-Mental-Disorders-Extension/DEVELOPMENT.md).
 
 ---
 
@@ -121,7 +123,7 @@ The extension icon appears in the toolbar. It will automatically monitor support
 
 | Layer | Technology |
 |:------|:-----------|
-| **ML Model** | RoBERTa fine-tuned on mental health text, exported to ONNX, INT8 quantized (~120 MB) |
+| **ML Model** | RoBERTa fine-tuned on mental health text, distributed as an INT8 ONNX runtime artifact (~120 MB) |
 | **Inference Runtime** | ONNX Runtime (CPU, 2 intra-op threads) — no PyTorch needed at runtime |
 | **Backend** | Python 3.10, Flask 3.x, Gunicorn (1 worker, 2 threads) |
 | **Data Store** | SQLite via Docker volume (`wellbeing-data`) |
@@ -135,6 +137,8 @@ The extension icon appears in the toolbar. It will automatically monitor support
 
 Fine-tuned RoBERTa hosted on Hugging Face: [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
 
+Quantized ONNX runtime artifact used by the app: [ekam28/emotion-detector-onnx](https://huggingface.co/ekam28/emotion-detector-onnx)
+
 | Label | Condition |
 |:------|:----------|
 | `LABEL_0` | ADHD |
@@ -145,7 +149,7 @@ Fine-tuned RoBERTa hosted on Hugging Face: [ekam28/emotion-detector](https://hug
 | `LABEL_5` | PTSD |
 | `LABEL_6` | Normal |
 
-The production build uses a **quantized ONNX** export for fast CPU inference without PyTorch:
+The production build uses a **quantized ONNX** model for fast CPU inference without PyTorch:
 
 ```
 Original (FP32):  ~499 MB
@@ -186,8 +190,7 @@ Detection-of-Mental-Disorders-Extension/
 │   │       ├── app.js           # Hub client-side logic
 │   │       └── app.css          # Hub styles (glassmorphism, DM Sans)
 │   ├── tests/                   # pytest suite (analyze, health, config, product)
-│   ├── convert_to_onnx.py       # One-time HF → ONNX export script
-│   ├── quantize_onnx.py         # ONNX → INT8 quantization script
+│   ├── bootstrap_model.py       # Downloads the ONNX runtime model if it is missing
 │   ├── Dockerfile               # Production image (python:3.10-slim)
 │   ├── requirements.txt         # Runtime deps (Flask, ONNX, transformers)
 │   ├── requirements-dev.txt     # Dev deps (pytest, black, flake8)
@@ -216,9 +219,7 @@ Detection-of-Mental-Disorders-Extension/
 │       └── chart.umd.min.js     # Bundled Chart.js
 ├── docker-compose.yml           # Single service + named volume
 ├── Makefile                     # Dev shortcuts (lint, test, format, docker)
-├── setup.sh                     # One-command local dev bootstrap
 ├── pyproject.toml               # Black + pytest config
-├── .pre-commit-config.yaml      # Pre-commit hooks (black, flake8, prettier)
 ├── .github/workflows/           # CI: lint, test, CodeQL, Docker build, release
 ├── DEVELOPMENT.md               # Developer setup guide
 └── README.md                    # ← You are here
@@ -230,10 +231,13 @@ Detection-of-Mental-Disorders-Extension/
 
 | Problem | Fix |
 |:--------|:----|
-| **Docker build fails on Apple Silicon** | The compose file sets `platform: linux/arm64`. On Intel Macs or Linux, remove that line. |
+| **Docker build fails on Apple Silicon** | The compose file defaults `DOCKER_PLATFORM` to `linux/arm64`. Override it with `DOCKER_PLATFORM=linux/amd64 docker compose up --build` on Intel Macs or Linux. |
 | **Extension won't connect to backend** | Ensure Docker is running and `curl http://localhost:8000/health` returns `"status": "ok"`. |
+| **Do I need to export or quantize the model first?** | No. Docker and the backend bootstrap script download the quantized runtime model automatically if it is missing. |
 | **Comments not detected on Reddit** | Reddit frequently changes its DOM. If selectors stop working, check `page-monitor.js` and `content.js` for the selector arrays. |
 | **High CPU / lag** | The Dockerfile limits Gunicorn to 1 worker, 2 threads, and ONNX to 2 intra-op threads. If your machine is still lagging, lower `OMP_NUM_THREADS` in the Dockerfile. |
+
+For developer-oriented troubleshooting and command references, use [DEVELOPMENT.md](/Users/ekambitt/Projects/Detection-of-Mental-Disorders-Extension/DEVELOPMENT.md).
 
 ---
 

@@ -15,7 +15,8 @@ class WellbeingStore:
 
     def initialize(self) -> None:
         with self._connect() as connection:
-            connection.executescript("""
+            connection.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS wellbeing_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source TEXT NOT NULL,
@@ -45,7 +46,8 @@ class WellbeingStore:
                     value_json TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
-                """)
+                """
+            )
 
         self.save_settings({})
 

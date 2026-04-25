@@ -3,17 +3,20 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    platform: linux/arm64
+    platform: ${DOCKER_PLATFORM:-linux/arm64}
     ports:
       - "8000:8000"
     environment:
-      - MODEL_PATH=/app/onnx_model_quantized
+      - MODEL_PATH=/home/appuser/model-cache/onnx_model_quantized
+      - MODEL_REPO_ID=ekam28/emotion-detector-onnx
+      - MODEL_REVISION=fa68a75ca66c2dab45f4d6151323d2d4afe75241
       - WELLBEING_DB_PATH=/app/data/wellbeing.db
     networks:
       - mental-health-net
     restart: unless-stopped
     volumes:
       - wellbeing-data:/app/data
+      - wellbeing-model-cache:/home/appuser/model-cache
 
 networks:
   mental-health-net:
@@ -21,3 +24,4 @@ networks:
 
 volumes:
   wellbeing-data:
+  wellbeing-model-cache:

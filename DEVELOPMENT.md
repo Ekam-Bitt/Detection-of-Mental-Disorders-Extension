@@ -11,33 +11,21 @@ Full developer environment for all three product surfaces: the Flask backend, th
 | Python | 3.10+ | Backend runtime, linting, tests |
 | Node.js | 20+ | Extension formatting (Prettier) |
 | Docker + Compose v2 | Latest | Production-like local backend |
-| Git | Latest | Version control, pre-commit hooks |
+| Git | Latest | Version control |
 
 ---
 
-## One-Command Bootstrap
+## Initial Setup
 
 ```bash
-# Clone and enter the repo
 git clone https://github.com/Ekam-Bitt/Detection-of-Mental-Disorders-Extension.git
 cd Detection-of-Mental-Disorders-Extension
 
-# Run the automated setup script
-./setup.sh
-```
-
-`setup.sh` will:
-1. Verify Python, Node.js, and Docker installations
-2. Create a `.venv` virtual environment and install backend + dev dependencies
-3. Install extension npm dependencies
-4. Install pre-commit hooks
-5. Create a `.env` file for local development (if missing)
-
-After setup, activate the virtual environment in every new terminal:
-
-```bash
+make setup
 source .venv/bin/activate
 ```
+
+This creates a local Python environment for backend work and installs the extension tooling used by `npm run format` and `npm run format:check`.
 
 ---
 
@@ -59,7 +47,7 @@ cd backend
 python -m flask --app wsgi:app run --port 8000 --debug
 ```
 
-When running bare-metal, the ONNX model is loaded from `backend/onnx_model_quantized/` (or whichever path `MODEL_PATH` points to). The SQLite DB defaults to `backend/data/wellbeing.db`.
+When running bare-metal, `make run-backend` first downloads the ONNX runtime model if it is missing. The SQLite DB defaults to `backend/data/wellbeing.db`.
 
 ### Loading the extension
 
@@ -79,6 +67,8 @@ When running bare-metal, the ONNX model is loaded from `backend/onnx_model_quant
 Run `make help` to see all targets. Key commands:
 
 ```bash
+make setup              # Create .venv and install backend + extension dev dependencies
+make bootstrap-model    # Download the ONNX runtime model if it is missing
 make install-dev        # Install all backend + extension + dev dependencies
 make run-backend        # Start Flask dev server on :8000
 make test-backend       # Run pytest suite
@@ -98,7 +88,7 @@ make clean              # Remove __pycache__, .pytest_cache, model cache, etc.
 source .venv/bin/activate
 
 # Lint
-flake8 backend/
+flake8 backend/ --max-line-length=88 --extend-ignore=E203 --exclude=.venv,venv,__pycache__,.git
 black --check backend/
 
 # Format
@@ -131,10 +121,10 @@ Key backend modules:
 cd extension
 
 # Lint
-npx prettier --check .
+npm run format:check
 
 # Format
-npx prettier --write .
+npm run format
 ```
 
 Key extension modules:
@@ -160,19 +150,7 @@ Key extension modules:
 
 ### Pre-commit Hooks
 
-Pre-commit hooks run automatically on `git commit`:
-
-- `trailing-whitespace`, `end-of-file-fixer`, `check-yaml`, `check-json`, `check-merge-conflict`
-- `black` (Python formatting)
-- `flake8` (Python linting)
-- `prettier` (extension JS/CSS/HTML/JSON formatting)
-
-To install or reinstall:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
+This repo no longer includes a committed `pre-commit` hook setup. Use `make lint` and `make format` directly, or add your own local hooks if you prefer that workflow.
 
 ---
 
@@ -182,7 +160,9 @@ pre-commit install
 
 | Variable | Default | Description |
 |:---------|:--------|:------------|
-| `MODEL_PATH` | `onnx_model_quantized` | Path to the quantized ONNX model directory |
+| `MODEL_PATH` | `onnx_model_quantized` | Path where the quantized ONNX model should exist locally |
+| `MODEL_REPO_ID` | `ekam28/emotion-detector-onnx` | Hugging Face model repo used for automatic runtime downloads |
+| `MODEL_REVISION` | `fa68a75ca66c2dab45f4d6151323d2d4afe75241` | Hugging Face revision used for runtime downloads |
 | `WELLBEING_DB_PATH` | `backend/data/wellbeing.db` | SQLite database file path |
 | `TOP_K` | `7` | Number of top labels to return per prediction |
 | `LOG_LEVEL` | `INFO` | Python logging level |
@@ -192,10 +172,13 @@ pre-commit install
 ### Docker Compose
 
 The `docker-compose.yml` sets:
-- `MODEL_PATH=/app/onnx_model_quantized`
+- `MODEL_PATH=/home/appuser/model-cache/onnx_model_quantized`
+- `MODEL_REPO_ID=ekam28/emotion-detector-onnx`
+- `MODEL_REVISION=fa68a75ca66c2dab45f4d6151323d2d4afe75241`
 - `WELLBEING_DB_PATH=/app/data/wellbeing.db`
-- `platform: linux/arm64` (remove for Intel/Linux hosts)
+- `DOCKER_PLATFORM=linux/arm64` by default (override with `linux/amd64` on Intel/Linux hosts)
 - Named volume `wellbeing-data` mounted at `/app/data` for persistent SQLite
+- Named volume `wellbeing-model-cache` mounted at `/home/appuser/model-cache` for persistent model reuse
 
 ### Extension
 
@@ -226,30 +209,20 @@ Test files:
 
 ### Extension Tests
 
+There is currently no committed automated test suite for the extension. The maintained validation path is:
+
 ```bash
 cd extension
-npm test
+npm run format:check
 ```
+
+For behavior changes, reload the unpacked extension in Chrome and manually verify the popup, page monitor, and backend connectivity.
 
 ---
 
-## ONNX Model Pipeline
+## ONNX Model
 
-The project ships with a pre-quantized ONNX model. If you need to regenerate it from the Hugging Face checkpoint:
-
-```bash
-# 1. Install export dependencies (one-time)
-pip install optimum[onnxruntime]
-
-# 2. Export HF model to ONNX (FP32, ~499 MB)
-cd backend
-python convert_to_onnx.py
-
-# 3. Quantize to INT8 (~125 MB, ~75% size reduction)
-python quantize_onnx.py
-```
-
-The quantized model is used by default in production (`MODEL_PATH=/app/onnx_model_quantized`).
+The app downloads the quantized runtime model on demand. Docker stores it in a persistent volume at `/home/appuser/model-cache/onnx_model_quantized`, and local bare-metal setup can fetch it with `make bootstrap-model`.
 
 ---
 

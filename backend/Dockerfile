@@ -2,7 +2,9 @@ FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    MODEL_PATH=/app/onnx_model_quantized \
+    MODEL_PATH=/home/appuser/model-cache/onnx_model_quantized \
+    MODEL_REPO_ID=ekam28/emotion-detector-onnx \
+    MODEL_REVISION=fa68a75ca66c2dab45f4d6151323d2d4afe75241 \
     LOG_LEVEL=INFO \
     TRANSFORMERS_NO_ADVISORY_WARNINGS=1 \
     ORT_LOG_LEVEL=ERROR \
@@ -18,7 +20,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=appuser:appuser . .
-RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
+RUN mkdir -p /app/data /home/appuser/model-cache \
+    && chown -R appuser:appuser /app/data /home/appuser/model-cache
 
 USER appuser
 

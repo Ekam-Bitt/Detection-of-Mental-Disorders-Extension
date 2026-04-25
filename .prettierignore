@@ -1,9 +1,0 @@
-# Backend
-backend/requirements-dev.txt
-
-# Test configuration
-pytest.ini
-
-# Vendored / generated
-**/node_modules/
-extension/libs/
