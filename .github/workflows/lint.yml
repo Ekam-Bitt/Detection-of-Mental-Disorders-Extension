@@ -11,35 +11,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: backend/requirements-dev.txt
+
       - name: Install Python lint dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black
+          pip install -r backend/requirements-dev.txt
+
       - name: Lint with flake8 (errors only)
         working-directory: backend
         run: |
           # Fail on syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-line-length=88 --extend-ignore=E203
+
       - name: Lint with flake8 (warnings)
         working-directory: backend
         run: |
           # Report all warnings but do not fail the build
-          flake8 . --count --exit-zero --statistics
+          flake8 . --count --exit-zero --statistics --max-line-length=88 --extend-ignore=E203
+
       - name: Check formatting with black
         working-directory: backend
         run: |
           black --check .
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install Prettier
+          cache: "npm"
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install extension dependencies
         working-directory: extension
-        run: npm install --save-dev prettier
+        run: npm ci
+
       - name: Check formatting with Prettier
         working-directory: extension
-        run: npx prettier . --check
+        run: npm run format:check

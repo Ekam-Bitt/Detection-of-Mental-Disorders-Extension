@@ -35,7 +35,3 @@ model_cache/
 
 # Large unquantized model (only ship quantized)
 onnx_model/
-
-# One-time conversion scripts
-convert_to_onnx.py
-quantize_onnx.py

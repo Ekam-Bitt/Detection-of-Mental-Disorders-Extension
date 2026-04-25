@@ -4,6 +4,7 @@ flask-cors>=6.0,<7
 gunicorn>=23,<26
 
 # ML dependencies (no PyTorch needed)
+huggingface-hub>=0.30,<1
 onnxruntime>=1.18
 transformers>=4.40,<5
 numpy
