@@ -55,6 +55,8 @@ All three surfaces share the **same SQLite database** (via Docker volume `wellbe
 - **Docker Desktop** (with Compose v2)
 - **Chrome** or any Chromium-based browser
 
+This Docker-first flow is the recommended path for macOS, Linux, and Windows first-time setup.
+
 ### 1. Clone the repository
 
 ```bash
@@ -71,6 +73,8 @@ docker compose up --build
 ```
 
 The first build takes a few minutes for Python dependency installation. On first Docker startup, the app downloads the quantized ONNX runtime model and caches it in a persistent Docker volume for reuse.
+
+On Windows, use the same command from PowerShell or Command Prompt with Docker Desktop running.
 
 ### 3. Open the web hub
 

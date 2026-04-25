@@ -15,6 +15,14 @@ Full developer environment for all three product surfaces: the Flask backend, th
 
 ---
 
+## Platform Notes
+
+- **Recommended for Windows:** use the Docker workflow in this file and load the unpacked extension in Chrome.
+- **Recommended for macOS/Linux:** Docker works best for first-time setup; the local `make` and `.venv/bin/...` commands below are also aimed at Unix-like shells.
+- **Bare-metal local commands in this file** assume a Unix-like shell. On Windows, use PowerShell equivalents if you want a local Python workflow instead of Docker.
+
+---
+
 ## Initial Setup
 
 ```bash
@@ -39,6 +47,8 @@ docker compose up --build
 
 This builds the production Docker image and starts the backend at `http://localhost:8000`. The web hub is served from the same process. The SQLite database is persisted in a Docker volume (`wellbeing-data`).
 
+For Windows users, this is the recommended first-clone setup path.
+
 ### Option B: Bare-metal Flask (for backend hacking)
 
 ```bash
@@ -48,6 +58,21 @@ python -m flask --app wsgi:app run --port 8000 --debug
 ```
 
 When running bare-metal, `make run-backend` first downloads the ONNX runtime model if it is missing. The SQLite DB defaults to `backend/data/wellbeing.db`.
+
+PowerShell equivalent setup, if needed:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r backend/requirements.txt
+python -m pip install -r backend/requirements-dev.txt
+Set-Location extension
+npm ci
+Set-Location ..
+python backend/bootstrap_model.py
+Set-Location backend
+python -m flask --app wsgi:app run --port 8000 --debug
+```
 
 ### Loading the extension
 
