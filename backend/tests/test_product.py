@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+
 class TestProductRoutes:
     def test_homepage_renders(self, client):
         response = client.get("/")
@@ -31,7 +34,7 @@ class TestProductRoutes:
             json={
                 "source": "extension",
                 "kind": "browsing_session",
-                "timestamp": "2026-04-22T12:00:00",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "title": "YouTube thread",
                 "riskScore": 0.74,
                 "durationMs": 180000,

@@ -2,9 +2,12 @@ import { analyzeBatch } from './api.js';
 import { summarizeResults } from './analysis.js';
 import { addAnalyzedResults, getSummary, resetState, state } from './state.js';
 
+/**
+ * Extract comments from the current page and analyze only the ones
+ * that have not already been analyzed. Merges new results with any
+ * previously cached results from the background auto-analysis.
+ */
 export async function extractAndAnalyze({ onProgress } = {}) {
-  resetState();
-
   const [tab] = await chrome.tabs.query({
     active: true,
     currentWindow: true,
@@ -27,9 +30,8 @@ export async function extractAndAnalyze({ onProgress } = {}) {
     return accumulator;
   }, []);
 
-  state.allExtractedComments = comments;
-
   if (!comments.length) {
+    resetState();
     return {
       tab,
       comments,
@@ -40,12 +42,37 @@ export async function extractAndAnalyze({ onProgress } = {}) {
     };
   }
 
-  const totalCount = comments.length;
+  // Build a set of comment texts that have already been analyzed
+  // so we can skip them and avoid wasting API calls.
+  const alreadyAnalyzed = new Set(state.analyzedResults.map((result) => result.text));
+
+  const newComments = comments.filter((comment) => !alreadyAnalyzed.has(comment.text));
+
+  // Track all extracted comments (for state reference)
+  state.allExtractedComments = comments;
+
+  if (newComments.length === 0) {
+    // Everything was already analyzed — just rebuild metrics from cache
+    const summary = getSummary();
+    const metrics = summarizeResults(state.analyzedResults);
+
+    return {
+      tab,
+      comments,
+      summary,
+      metrics,
+      results: metrics.results,
+      topComments: state.topComments,
+    };
+  }
+
+  const totalCount = newComments.length;
+  let batchIndex = 0;
 
   while (true) {
-    const startIndex = state.currentBatch * state.BATCH_SIZE;
+    const startIndex = batchIndex * state.BATCH_SIZE;
     const endIndex = Math.min(startIndex + state.BATCH_SIZE, totalCount);
-    const batchComments = comments.slice(startIndex, endIndex);
+    const batchComments = newComments.slice(startIndex, endIndex);
 
     if (!batchComments.length) break;
 
@@ -53,7 +80,7 @@ export async function extractAndAnalyze({ onProgress } = {}) {
     const progress = Math.round((currentCount / totalCount) * 100);
 
     onProgress?.(
-      `Analyzing batch ${state.currentBatch + 1} of ${Math.ceil(
+      `Analyzing batch ${batchIndex + 1} of ${Math.ceil(
         totalCount / state.BATCH_SIZE
       )} (${progress}%)`
     );
@@ -68,7 +95,7 @@ export async function extractAndAnalyze({ onProgress } = {}) {
     ).results;
 
     addAnalyzedResults(summarizedBatch);
-    state.currentBatch += 1;
+    batchIndex += 1;
   }
 
   const summary = getSummary();

@@ -5,7 +5,6 @@ from pathlib import Path
 
 from huggingface_hub import snapshot_download
 
-
 DEFAULT_MODEL_PATH = Path("backend/onnx_model_quantized")
 REQUIRED_FILES = (
     "model.onnx",

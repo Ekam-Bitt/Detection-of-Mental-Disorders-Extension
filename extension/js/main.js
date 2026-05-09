@@ -8,15 +8,20 @@ import {
   loadWellbeingSettings,
   saveWellbeingSettings,
 } from './wellbeing-storage.js';
+import { getMode, setMode, checkLocalHealth, isCloudMode } from './mode.js';
 
 let currentSettings = null;
 let currentAnalysis = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   currentSettings = await loadShieldSettings();
-  await refreshDashboard();
   ui.syncSettings(currentSettings);
   ui.setActiveView('dashboard');
+
+  // Initialize mode toggle and settings
+  await initializeModeToggle();
+  await syncModeUI(await getMode());
+  await refreshDashboard();
 
   bindViewToggles();
   bindSettings();
@@ -26,6 +31,115 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await checkExistingAnalysis();
 });
+
+// ---------------------------------------------------------------------------
+// Mode Toggle
+// ---------------------------------------------------------------------------
+
+async function initializeModeToggle() {
+  // Check local backend status
+  updateLocalStatus();
+
+  // Bind radio buttons
+  document.querySelectorAll('input[name="inferenceMode"]').forEach((radio) => {
+    radio.addEventListener('change', async (event) => {
+      const newMode = event.target.value;
+
+      if (newMode === 'local') {
+        const health = await checkLocalHealth();
+        if (!health.available) {
+          document.getElementById('localSetupGuide')?.classList.remove('hidden');
+        } else {
+          document.getElementById('localSetupGuide')?.classList.add('hidden');
+        }
+      } else {
+        document.getElementById('localSetupGuide')?.classList.add('hidden');
+      }
+
+      await setMode(newMode);
+      await syncModeUI(newMode);
+      await refreshDashboard();
+    });
+  });
+
+  // Retry button
+  document.getElementById('retryLocalCheck')?.addEventListener('click', async () => {
+    await updateLocalStatus();
+  });
+}
+
+async function syncModeUI(mode) {
+  const isCloud = mode === 'cloud';
+  const badge = document.getElementById('modeStatusBadge');
+  const cloudOption = document.getElementById('modeOptionCloud');
+  const localOption = document.getElementById('modeOptionLocal');
+  const cloudRadio = cloudOption?.querySelector('input');
+  const localRadio = localOption?.querySelector('input');
+  const cloudBanner = document.getElementById('cloudModeBanner');
+  const dashboardLinkRow = document.getElementById('dashboardLinkRow');
+
+  // Update radio state
+  if (cloudRadio) cloudRadio.checked = isCloud;
+  if (localRadio) localRadio.checked = !isCloud;
+
+  // Update active styling
+  cloudOption?.classList.toggle('active', isCloud);
+  localOption?.classList.toggle('active', !isCloud);
+
+  // Update badge
+  if (badge) {
+    badge.textContent = isCloud ? 'Cloud' : 'Local';
+    badge.className = `mode-status-badge ${isCloud ? 'badge-cloud' : 'badge-local'}`;
+  }
+
+  // Show/hide cloud banner and hub link
+  cloudBanner?.classList.toggle('hidden', !isCloud);
+  dashboardLinkRow?.classList.toggle('hidden', isCloud);
+
+  // Show/hide dashboard panels based on mode
+  const dashboardPanels = document.querySelectorAll('#dashboardView .panel');
+  const statsGrid = document.querySelector('#dashboardView .stats-grid');
+  dashboardPanels.forEach((panel) => panel.classList.toggle('hidden', isCloud));
+  statsGrid?.classList.toggle('hidden', isCloud);
+}
+
+async function updateLocalStatus() {
+  const localStatusEl = document.getElementById('localStatus');
+  const setupGuide = document.getElementById('localSetupGuide');
+
+  if (localStatusEl) localStatusEl.textContent = 'Checking...';
+
+  const health = await checkLocalHealth();
+
+  if (health.available && health.modelLoaded) {
+    if (localStatusEl) {
+      localStatusEl.textContent = 'Backend online';
+      localStatusEl.className = 'mode-option-status status-online';
+    }
+    setupGuide?.classList.add('hidden');
+  } else if (health.available) {
+    if (localStatusEl) {
+      localStatusEl.textContent = 'Backend online, model loading...';
+      localStatusEl.className = 'mode-option-status status-warning';
+    }
+    setupGuide?.classList.add('hidden');
+  } else {
+    if (localStatusEl) {
+      localStatusEl.textContent = 'Backend not detected';
+      localStatusEl.className = 'mode-option-status status-offline';
+    }
+
+    // Only show setup guide if user is currently in local mode
+    const mode = await getMode();
+    if (mode === 'local') {
+      setupGuide?.classList.remove('hidden');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
 
 async function checkExistingAnalysis() {
   try {
@@ -55,8 +169,9 @@ async function refreshDashboard() {
       averageRisk: 0,
       volatility: { flagged: false },
       totalMinutes: 0,
-      insight:
-        'The local hub is unreachable. Start the backend to sync dashboard data.',
+      insight: (await isCloudMode())
+        ? 'Dashboard and trend tracking are available in Local mode.'
+        : 'The local hub is unreachable. Start the backend to sync dashboard data.',
       lastUpdated: null,
       calmShare: 0,
       guardedShare: 0,
@@ -65,6 +180,10 @@ async function refreshDashboard() {
     });
   }
 }
+
+// ---------------------------------------------------------------------------
+// View Toggles & Settings
+// ---------------------------------------------------------------------------
 
 function bindViewToggles() {
   document.querySelectorAll('[data-view-toggle]').forEach((button) => {
@@ -119,8 +238,14 @@ function bindAnalyzeButton() {
     ui.setActiveView('analysis');
 
     try {
+      // Show appropriate loading message based on mode
+      const cloud = await isCloudMode();
+      const loadingMsg = cloud
+        ? 'Analyzing via cloud model...'
+        : 'Analyzing via local model...';
+
       const analysis = await extractAndAnalyze({
-        onProgress: (message) => ui.showAnalysisLoader(message),
+        onProgress: (message) => ui.showAnalysisLoader(message || loadingMsg),
       });
 
       if (!analysis.comments.length) {
@@ -141,13 +266,20 @@ function bindAnalyzeButton() {
         },
       });
 
-      await refreshDashboard();
+      if (!cloud) {
+        await refreshDashboard();
+      }
     } catch (error) {
       console.error('Analysis failed:', error);
-      const message =
-        error.name === 'AbortError'
-          ? 'The local analysis service timed out. Please try again.'
-          : `Analysis failed: ${error.message}`;
+      const cloud = await isCloudMode();
+      let message;
+      if (error.name === 'AbortError') {
+        message = cloud
+          ? 'Cloud inference timed out. The HF Space may be waking up -- try again in a moment.'
+          : 'The local analysis service timed out. Please try again.';
+      } else {
+        message = `Analysis failed: ${error.message}`;
+      }
       ui.showAnalysisError(message);
     }
   });
@@ -166,8 +298,7 @@ function rerenderAnalysis() {
   ui.renderAnalysis(
     currentAnalysis.metrics,
     currentAnalysis.topComments,
-    state.activeFilter,
-    currentSettings
+    state.activeFilter
   );
 }
 

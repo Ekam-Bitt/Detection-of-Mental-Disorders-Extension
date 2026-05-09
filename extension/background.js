@@ -11,6 +11,7 @@ import {
   postEvent,
 } from './js/backend-api.js';
 import { ensureWellbeingState, loadWellbeingSettings } from './js/wellbeing-storage.js';
+import { isCloudMode } from './js/mode.js';
 
 const tabSessions = new Map();
 let activeTabId = null;
@@ -104,14 +105,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'GET_INFERENCE_MODE') {
+    isCloudMode()
+      .then((cloud) => sendResponse({ ok: true, mode: cloud ? 'cloud' : 'local' }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   return false;
 });
 
 async function initialize() {
-  try {
-    await ensureWellbeingState();
-  } catch (error) {
-    console.error('Failed to warm wellbeing state from backend:', error);
+  // Only sync wellbeing state from backend in local mode
+  if (!(await isCloudMode())) {
+    try {
+      await ensureWellbeingState();
+    } catch (error) {
+      console.error('Failed to warm wellbeing state from backend:', error);
+    }
   }
 
   const [activeTab] = await chrome.tabs.query({
@@ -188,6 +199,9 @@ async function persistTabTime(tabId) {
   ) {
     return;
   }
+
+  // Skip event persistence in cloud mode (no database)
+  if (await isCloudMode()) return;
 
   try {
     await postEvent({
@@ -273,6 +287,9 @@ async function handleManualAnalysis(payload) {
   session.riskScore = payload.metrics?.averageRisk ?? session.riskScore;
   session.toxicRatio = payload.metrics?.toxicRatio ?? session.toxicRatio;
   session.totalComments = payload.metrics?.totalComments ?? session.totalComments;
+
+  // Skip event persistence in cloud mode (no database)
+  if (await isCloudMode()) return;
 
   try {
     await postEvent({

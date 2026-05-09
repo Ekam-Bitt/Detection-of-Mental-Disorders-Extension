@@ -17,7 +17,7 @@ from .wellbeing import (
     get_support_resource,
 )
 
-__version__ = "1.2.0"
+__version__ = "2.0.0"
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 logger = logging.getLogger("api")

@@ -89,7 +89,7 @@ input {
 
 .view-switch {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin: 14px 0 18px;
   padding: 6px;
@@ -521,41 +521,6 @@ input[type='range'] {
   border-radius: inherit;
 }
 
-.shielded {
-  cursor: pointer;
-}
-
-.shielded::after {
-  content: 'Shielded. Click to reveal.';
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.7);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.shielded .comment-text,
-.shielded .sentiment-bars {
-  filter: blur(10px);
-  pointer-events: none;
-  user-select: none;
-}
-
-.shielded.revealed::after {
-  display: none;
-}
-
-.shielded.revealed .comment-text,
-.shielded.revealed .sentiment-bars {
-  filter: none;
-  pointer-events: auto;
-  user-select: text;
-}
-
 .loader {
   display: flex;
   flex-direction: column;
@@ -582,6 +547,199 @@ input[type='range'] {
   text-align: center;
   color: var(--ink-soft);
   background: rgba(255, 255, 255, 0.72);
+}
+
+/* -----------------------------------------------------------
+   Mode Toggle (inside Settings panel)
+   ----------------------------------------------------------- */
+
+.mode-toggle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mode-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.badge-cloud {
+  background: rgba(56, 189, 248, 0.16);
+  color: #0284c7;
+}
+
+.badge-local {
+  background: rgba(16, 185, 129, 0.16);
+  color: #059669;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mode-option:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mode-option.active {
+  border-color: var(--teal);
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.mode-option input[type='radio'] {
+  margin-top: 3px;
+  accent-color: var(--teal);
+}
+
+.mode-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mode-option-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.mode-rec {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mode-option-desc {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.mode-option-status {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.status-online {
+  color: #059669;
+}
+
+.status-warning {
+  color: #d97706;
+}
+
+.status-offline {
+  color: #dc2626;
+}
+
+/* Local Setup Guide */
+
+.local-setup-guide {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.local-setup-guide p {
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.local-setup-guide ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+.local-setup-guide a {
+  color: var(--teal-deep);
+  font-weight: 600;
+}
+
+.local-setup-guide code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+}
+
+.retry-btn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  color: var(--teal-deep);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.retry-btn:hover {
+  background: rgba(15, 118, 110, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Cloud Mode Banner */
+
+.cloud-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.08),
+    rgba(14, 116, 144, 0.06)
+  );
+  border: 1px solid rgba(56, 189, 248, 0.16);
+}
+
+.cloud-banner-text strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.cloud-banner-text p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.seven-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .hidden {

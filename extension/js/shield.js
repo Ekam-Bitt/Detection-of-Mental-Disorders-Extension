@@ -22,7 +22,3 @@ export async function setThreshold(value) {
   Object.assign(shieldState, next);
   return shieldState;
 }
-
-export function isShielded(riskScore, settings = shieldState) {
-  return settings.shieldEnabled && riskScore >= settings.shieldThreshold;
-}

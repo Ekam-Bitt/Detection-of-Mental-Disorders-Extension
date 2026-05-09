@@ -1,6 +1,6 @@
 # Development Setup Guide
 
-Full developer environment for all three product surfaces: the Flask backend, the web hub, and the Chrome extension.
+Full developer environment for the v2 architecture: the Chrome extension, the optional local Flask backend/web hub, and the Hugging Face Space cloud inference surface.
 
 ---
 
@@ -10,7 +10,7 @@ Full developer environment for all three product surfaces: the Flask backend, th
 |:-----|:--------|:--------|
 | Python | 3.10+ | Backend runtime, linting, tests |
 | Node.js | 20+ | Extension formatting (Prettier) |
-| Docker + Compose v2 | Latest | Production-like local backend |
+| Docker + Compose v2 | Latest | Production-like local backend and HF Space image |
 | Git | Latest | Version control |
 
 ---
@@ -37,27 +37,38 @@ This creates a local Python environment for backend work and installs the extens
 
 ---
 
-## Starting the Full Stack
+## Starting the Product
 
-### Option A: Docker (recommended for daily use)
+### Option A: Cloud Mode extension only
+
+Cloud Mode is the default runtime for the extension. It sends inference requests to the hosted Hugging Face Space and does not require Docker, the Flask backend, SQLite, or the web hub.
+
+1. Run `cd extension && npm ci` if dependencies are not installed.
+2. Load `extension/` as an unpacked Chrome extension.
+3. Keep **Settings → Inference Mode → Cloud** selected.
+
+In Cloud Mode, the popup's manual thread scan and in-page shield/nudge behavior work, but dashboard history and the web hub are intentionally hidden because there is no local database.
+
+### Option B: Local Mode with Docker
 
 ```bash
 docker compose up --build
 ```
 
-This builds the production Docker image and starts the backend at `http://localhost:8000`. The web hub is served from the same process. The SQLite database is persisted in a Docker volume (`wellbeing-data`).
+This builds the local backend and starts it at `http://localhost:8000`. The web hub is served from the same process. The SQLite database is persisted in Docker volume `wellbeing-data`, and the ONNX model is cached in `wellbeing-model-cache`.
 
-For Windows users, this is the recommended first-clone setup path.
+For Windows users who want Local Mode, this is the recommended first-clone setup path.
 
-### Option B: Bare-metal Flask (for backend hacking)
+### Option C: Bare-metal Flask (for backend hacking)
 
 ```bash
 source .venv/bin/activate
+python backend/bootstrap_model.py
 cd backend
 python -m flask --app wsgi:app run --port 8000 --debug
 ```
 
-When running bare-metal, `make run-backend` first downloads the ONNX runtime model if it is missing. The SQLite DB defaults to `backend/data/wellbeing.db`.
+When running bare-metal, the SQLite DB defaults to `backend/data/wellbeing.db`.
 
 PowerShell equivalent setup, if needed:
 
@@ -79,7 +90,8 @@ python -m flask --app wsgi:app run --port 8000 --debug
 1. Open Chrome → `chrome://extensions/`
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked** → select the `extension/` folder
-4. The extension connects to `http://localhost:8000` by default
+4. The extension starts in Cloud Mode by default
+5. To use the local backend, open the popup and switch **Settings → Inference Mode → Local**
 
 > **Tip:** After code changes to the extension, click the ↻ reload button on the extension card in `chrome://extensions/`. For `page-monitor.js` or `content.js` changes, also reload the target tab.
 
@@ -157,21 +169,22 @@ Key extension modules:
 | File | Purpose |
 |:-----|:--------|
 | `manifest.json` | Manifest V3 — permissions, content scripts, service worker |
-| `background.js` | Service worker — tab session tracking, event sync, message router |
+| `background.js` | Service worker — tab session tracking, mode-aware event sync, message router |
 | `page-monitor.js` | Content script (auto-injected) — passive comment analysis, shield mode, nudges, draft support prompts |
 | `content.js` | Injected script (on-demand) — comment DOM extraction for YouTube/Reddit/X |
-| `config.js` | Shared constants: thresholds, selectors, labels, support resources |
+| `config.js` | Shared constants: cloud/local endpoints, thresholds, selectors, labels, support resources |
 | `popup.html` / `styles.css` | Popup UI shell and styles |
-| `js/main.js` | Popup entry — dashboard view, settings, analyze button |
+| `js/main.js` | Popup entry — dashboard/thread/settings views, mode toggle, analyze button |
+| `js/mode.js` | Inference mode manager — Cloud vs Local persistence and local health probing |
 | `js/analysis.js` | Client-side risk scoring and summary (mirrors `wellbeing.py` logic) |
-| `js/api.js` | `/api/analyze` client (single + batch) |
-| `js/backend-api.js` | Backend REST client for settings, dashboard, events, support resources |
-| `js/comments.js` | Extract + batch-analyze orchestration (popup "Analyze" flow) |
+| `js/api.js` | Dual-mode inference client: HF Space `/batch` in Cloud Mode, local `/api/analyze` in Local Mode |
+| `js/backend-api.js` | Local backend REST client; returns storage-backed no-op defaults in Cloud Mode |
+| `js/comments.js` | Extract + batch-analyze orchestration with incremental cache reuse |
 | `js/chart.js` | Chart.js wrapper for popup trend charts |
-| `js/shield.js` | Shield mode toggle helpers |
+| `js/shield.js` | Shield setting helpers for in-page protection only |
 | `js/state.js` | In-memory popup state (results, batch cursor, filters) |
-| `js/ui.js` | Popup DOM rendering (dashboard, analysis, settings panels) |
-| `js/wellbeing-storage.js` | Settings sync: backend → `chrome.storage.local` fallback |
+| `js/ui.js` | Popup DOM rendering (dashboard, thread analysis, settings panels). Popup analysis results are never blurred. |
+| `js/wellbeing-storage.js` | Settings sync: `chrome.storage.local` in Cloud Mode, backend with local cache fallback in Local Mode |
 
 ### Pre-commit Hooks
 
@@ -207,7 +220,11 @@ The `docker-compose.yml` sets:
 
 ### Extension
 
-The extension reads `apiBaseUrl` from `chrome.storage.sync` (default: `http://localhost:8000`). All other configuration lives in `extension/config.js`.
+The extension stores its inference mode in `chrome.storage.sync` under `inferenceMode`.
+
+- Cloud Mode uses `CLOUD_API_BASE_URL` from `extension/config.js`.
+- Local Mode reads `apiBaseUrl` from `chrome.storage.sync` (default: `http://localhost:8000`).
+- Shield, nudge, and support prompt settings live in `chrome.storage.local` in Cloud Mode, and sync through `/api/settings` with local cache fallback in Local Mode.
 
 ---
 
@@ -261,6 +278,16 @@ The app downloads the quantized runtime model on demand. Docker stores it in a p
 | `codeql.yml` | Push / PR / Schedule | GitHub CodeQL security analysis |
 | `release.yml` | Tag push | Creates a GitHub release from a version tag |
 
+Local `act` runs may need the existing runner image's bundled Node path exported:
+
+```bash
+act push -W .github/workflows/lint.yml \
+  --container-architecture linux/amd64 \
+  --pull=false \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --env PATH=/opt/acttoolcache/node/24.15.0/x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
 ---
 
 ## Troubleshooting
@@ -298,7 +325,12 @@ ports:
 2. Check Chrome DevTools → Extensions → Errors
 3. Reload the extension from `chrome://extensions/`
 
-**API connection errors:**
+**API connection errors in Cloud Mode:**
+1. Confirm `*://*.hf.space/*` is in `host_permissions` in `manifest.json`
+2. The first request can be slow while the Hugging Face Space wakes up
+3. Try again after 10-60 seconds if a timeout appears
+
+**API connection errors in Local Mode:**
 1. Confirm backend is running: `curl http://localhost:8000/health`
 2. Check that `http://localhost:8000/*` is in `host_permissions` in `manifest.json`
 3. Check CORS: the backend allows `"*"` origins on `/api/*`
@@ -309,8 +341,9 @@ ports:
 - Use DevTools to inspect whether comments match the expected selectors
 
 **Settings not syncing:**
-- The extension tries to sync settings with the backend on startup and falls back to `chrome.storage.local`
-- If the backend was down when the extension initialized, reload the extension after starting the backend
+- Cloud Mode uses `chrome.storage.local` as the source of truth
+- Local Mode syncs settings with the backend and falls back to `chrome.storage.local`
+- If the backend was down when Local Mode initialized, reload the extension after starting the backend
 
 ---
 

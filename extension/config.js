@@ -1,8 +1,15 @@
 export const DEFAULT_API_BASE_URL = 'http://localhost:8000';
+export const CLOUD_API_BASE_URL = 'https://ekam28-emotion-detector-api.hf.space';
 export const API_TIMEOUT = 60000;
+export const CLOUD_API_TIMEOUT = 120000;
 export const MAX_COMMENT_LENGTH = 5000;
 export const MAX_COMMENTS_PER_REQUEST = 100;
 export const BATCH_SIZE = 30;
+
+export const INFERENCE_MODE_KEY = 'inferenceMode';
+export const INFERENCE_MODE_CLOUD = 'cloud';
+export const INFERENCE_MODE_LOCAL = 'local';
+export const DEFAULT_INFERENCE_MODE = INFERENCE_MODE_CLOUD;
 
 export const SUPPORTED_DOMAINS = [
   'youtube.com',

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mental Wellbeing Guard",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Track emotional feed exposure, shield distressing content, and surface support on supported social threads.",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "webNavigation"],
   "host_permissions": [
@@ -9,6 +9,7 @@
     "*://*.reddit.com/*",
     "*://*.twitter.com/*",
     "*://*.x.com/*",
+    "*://*.hf.space/*",
     "http://localhost:8000/*",
     "http://127.0.0.1:8000/*"
   ],

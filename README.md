@@ -4,122 +4,127 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/docker-build.yml?label=build)
 ![GitHub License](https://img.shields.io/github/license/Ekam-Bitt/Detection-of-Mental-Disorders-Extension)
 
-A privacy-first, local-only wellbeing platform that combines a **web dashboard**, a **self-analysis tool**, and a **Chrome extension** into a single unified product. It runs a quantized ONNX RoBERTa model entirely on your machine — no cloud, no telemetry, no external data sharing.
+A dual-mode wellbeing platform that combines a **Chrome extension**, an optional **web dashboard**, and a **self-analysis tool**. It uses a quantized ONNX RoBERTa model to classify mental health signals in social media comments across YouTube, Reddit, and X (Twitter).
+
+**v2.0** introduces **Cloud Mode** (default) for zero-setup usage via Hugging Face Spaces, while **Local Mode** retains the full Docker-based pipeline with dashboard, history tracking, and complete data privacy.
 
 ---
 
 ## Architecture Overview
 
-The project is organized into three product surfaces that share a single backend and data store:
-
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                     Local Backend (Flask)                      │
-│  ┌──────────────┐  ┌───────────────┐  ┌─────────────────────┐  │
-│  │ ONNX Runtime │  │  Wellbeing    │  │ Product Web Hub     │  │
-│  │ Inference    │  │ Store (SQLite)│  │ (Jinja templates +  │  │
-│  │ Engine       │  │               │  │  static JS/CSS)     │  │
-│  └──────┬───────┘  └──────┬────────┘  └─────────┬───────────┘  │
-│         │                 │                     │              │
-│         └────────┬────────┘                     │              │
-│                  ▼                              ▼              │
-│            REST API (/api/*)              Web Hub (/)          │
-└─────────────┬────────────────────────────────┬─────────────────┘
-              │                                │
-   ┌──────────▼───────────┐        ┌───────────▼──────────┐
-   │   Chrome Extension   │        │   Browser (Hub UI)   │
-   │  • Page monitor      │        │  • Dashboard         │
-   │  • Shield mode       │        │  • Self-check        │
-   │  • Smart nudges      │        │  • Recent timeline   │
-   │  • Support prompts   │        │  • Extension guide   │
-   │  • Popup dashboard   │        └──────────────────────┘
-   └──────────────────────┘
+                        Chrome Extension
+                              |
+               +--------------+--------------+
+               |                             |
+        Cloud Mode (default)          Local Mode (opt-in)
+               |                             |
+    HF Space ONNX API              Docker Flask Backend
+    (ekam28-emotion-                  localhost:8000
+     detector-api.hf.space)              |
+               |                    +----+----+
+               |                    |         |
+          Inference only       ONNX Runtime  SQLite DB
+                                    |         |
+                               Inference   Dashboard
+                                           + History
 ```
 
-### How the pieces connect
+### Mode Comparison
 
-| Surface | What it does | Data flow |
-|:--------|:-------------|:----------|
-| **Web Hub** (`localhost:8000`) | Full-screen dashboard for weekly trend review, manual self-checks, and extension guidance. | Reads/writes events and settings via `/api/dashboard`, `/api/self-check`, `/api/settings`. |
-| **Chrome Extension** | Passive page monitor + popup for on-demand thread scans. Shields high-risk comments, triggers nudges, surfaces support prompts on drafts. | Sends analyzed events to `/api/events`, reads settings from `/api/settings`, fetches dashboard from `/api/dashboard`. Falls back to `chrome.storage.local` when backend is unreachable. |
-| **Backend API** | Flask server with ONNX inference, SQLite-backed wellbeing store, and server-rendered product hub. | Serves the hub UI, processes `/api/analyze` and `/api/self-check` requests, persists events and settings in a Docker volume. |
-
-All three surfaces share the **same SQLite database** (via Docker volume `wellbeing-data`) and the **same settings store**, so a self-check run on the web hub and a browsing session tracked by the extension both appear on the same unified timeline.
+| Capability | Cloud Mode | Local Mode |
+|:-----------|:-----------|:-----------|
+| Comment analysis | Yes | Yes |
+| Shield Mode (on-page blur) | Yes | Yes |
+| Smart Nudges | Yes | Yes |
+| Draft Support Prompts | Yes | Yes |
+| Weekly Dashboard | No | Yes |
+| Trend Charts | No | Yes |
+| Browsing History | No | Yes |
+| Web Hub (localhost:8000) | No | Yes |
+| Setup required | None | Docker |
+| Data privacy | Data sent to HF Space | Fully local |
+| Settings storage | chrome.storage | Backend + chrome.storage |
 
 ---
 
 ## Quick Start
 
-### Prerequisites
+### Cloud Mode (Recommended)
+
+1. Download the [latest release](https://github.com/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/releases/latest) and unzip
+2. Open Chrome and go to `chrome://extensions/`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked** and select the `extension/` folder
+5. Done. The extension works immediately using the hosted HF Space API.
+
+### Local Mode (Privacy-First)
+
+For users who want full data privacy, dashboard, and history tracking:
+
+#### Prerequisites
 
 - **Docker Desktop** (with Compose v2)
 - **Chrome** or any Chromium-based browser
 
-This Docker-first flow is the recommended path for macOS, Linux, and Windows first-time setup.
-
-### 1. Clone the repository
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Ekam-Bitt/Detection-of-Mental-Disorders-Extension.git
 cd Detection-of-Mental-Disorders-Extension
 ```
 
-Or download the [latest release](https://github.com/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/releases/latest) source archive and unzip.
-
-### 2. Start the backend
+#### 2. Start the backend
 
 ```bash
 docker compose up --build
 ```
 
-The first build takes a few minutes for Python dependency installation. On first Docker startup, the app downloads the quantized ONNX runtime model and caches it in a persistent Docker volume for reuse.
+The first build takes a few minutes. On first startup, the app downloads the quantized ONNX model (~500 MB) and caches it in a persistent Docker volume.
 
-On Windows, use the same command from PowerShell or Command Prompt with Docker Desktop running.
+#### 3. Load the extension
 
-### 3. Open the web hub
-
-Navigate to **[http://localhost:8000](http://localhost:8000)** in your browser. This is the primary product surface:
-
-- **Dashboard** — weekly exposure trends, emotional diet breakdown, and a unified event timeline
-- **Self-check** — paste any text for private analysis; results feed into the shared dashboard
-- **Extension companion** — guidance on what syncs from the extension and what stays in-browser
-
-### 4. Load the extension
-
-1. Open Chrome → `chrome://extensions/`
+1. Open Chrome and go to `chrome://extensions/`
 2. Enable **Developer mode** (top right)
-3. Click **Load unpacked** → select the `extension/` folder from this repo
+3. Click **Load unpacked** and select the `extension/` folder
 
-The extension icon appears in the toolbar. It will automatically monitor supported sites in the background.
+#### 4. Switch to Local Mode
 
-For local development commands, formatting, and backend test workflow, see [DEVELOPMENT.md](/Users/ekambitt/Projects/Detection-of-Mental-Disorders-Extension/DEVELOPMENT.md).
+Open the extension popup, go to the **Settings** tab, and select **Local** under Inference Mode. The extension will verify the backend connection automatically.
+
+#### 5. Open the Web Hub
+
+Navigate to **[http://localhost:8000](http://localhost:8000)** for the full dashboard experience:
+
+- **Dashboard** -- weekly exposure trends, emotional diet breakdown, unified event timeline
+- **Self-check** -- paste any text for private analysis; results feed into the shared dashboard
+- **Extension companion** -- guidance on what syncs from the extension
 
 ---
 
 ## Features
 
-### Web Hub (localhost:8000)
+### Chrome Extension (Both Modes)
 
-- **Weekly Wellbeing Dashboard** — rolling 7-day trend of risk exposure, volatility, emotional diet (calm / watchful / intense), and source mix (extension vs. self-checks)
-- **Manual Self-Check** — paste a journal note, message, or any text; the analysis result is persisted in the shared timeline with an optional support prompt for high-risk text
-- **Unified Timeline** — recent events from both browsing sessions and manual checks in one chronological view
-- **Support Resources** — locale-aware crisis hotline links (India, US, fallback) that surface automatically for high-risk results
+- **Passive Page Monitor** -- auto-extracts and analyzes up to 24 comments on YouTube, Reddit, and X (Twitter) on every page load and scroll, with debounced re-analysis
+- **Smart Shield Mode** -- blurs high-risk comments directly on the website when they exceed a configurable distress threshold; click to reveal
+- **Rabbit-Hole Nudges** -- detects unusually intense threads and offers a 5-minute breather that temporarily shields all elevated comments
+- **Draft-Time Support Prompts** -- watches your text inputs for high-risk keywords and surfaces grounding guidance with local crisis contacts
+- **Manual Thread Scan** -- on-demand analysis with comment-by-comment breakdown, label filtering, and a Thread Mix chart
+- **Incremental Analysis** -- previously analyzed comments are cached and skipped on re-scan, avoiding redundant API calls
+- **Settings Tab** -- configure inference mode, shield threshold, nudge toggles, and support prompts in one place
 
-### Chrome Extension
+### Local Mode Extras
 
-- **Passive Page Monitor** — auto-extracts and analyzes up to 24 comments on YouTube, Reddit, and X (Twitter) on every page load / scroll, with debounced re-analysis
-- **Smart Shield Mode** — blurs comments exceeding a configurable distress threshold; click to reveal
-- **Rabbit-Hole Nudges** — detects when a thread is unusually intense and offers a 5-minute breather flow that temporarily shields all elevated comments
-- **Draft-Time Support Prompts** — watches your own text inputs for high-risk keywords and surfaces grounding guidance with local crisis contacts
-- **Popup Dashboard** — compact 7-day trend overview, settings panel, and manual thread scan with comment-by-comment breakdown and label filtering
-- **Browsing Session Tracking** — passively records time on supported domains with the thread's risk score and syncs it to the backend on tab switch / close
+- **Popup Dashboard** -- compact 7-day trend overview with exposure stats and emotional diet breakdown
+- **Browsing Session Tracking** -- passively records time on supported domains with risk scores and syncs to the backend
+- **Web Hub** -- full-screen dashboard, self-check tool, and unified timeline at localhost:8000
 
 ### Shared Across Surfaces
 
-- **7 Classification Labels** — ADHD, Anxiety, Autism, BPD, Depression, PTSD, Normal
-- **Distress-Weighted Risk Score** — composite metric combining label probabilities, distress weights, and keyword boosting
-- **Volatility Detection** — flags erratic session-to-session swings in risk exposure
-- **Settings Sync** — shield threshold, nudge toggles, and support prompt toggles are shared between hub and extension via the backend; extension falls back to local cache if backend is down
+- **7 Classification Labels** -- ADHD, Anxiety, Autism, BPD, Depression, PTSD, Normal
+- **Distress-Weighted Risk Score** -- composite metric combining label probabilities, distress weights, and keyword boosting
+- **Volatility Detection** -- flags erratic session-to-session swings in risk exposure
 
 ---
 
@@ -127,11 +132,12 @@ For local development commands, formatting, and backend test workflow, see [DEVE
 
 | Layer | Technology |
 |:------|:-----------|
-| **ML Model** | RoBERTa fine-tuned on mental health text, distributed as an INT8 ONNX runtime artifact (~120 MB) |
-| **Inference Runtime** | ONNX Runtime (CPU, 2 intra-op threads) — no PyTorch needed at runtime |
+| **ML Model** | RoBERTa fine-tuned on mental health text, distributed as an INT8 ONNX artifact (~120 MB) |
+| **Cloud Inference** | Hugging Face Spaces (Docker SDK, FastAPI, ONNX Runtime) |
+| **Local Inference** | ONNX Runtime (CPU, 2 intra-op threads) -- no PyTorch needed at runtime |
 | **Backend** | Python 3.10, Flask 3.x, Gunicorn (1 worker, 2 threads) |
 | **Data Store** | SQLite via Docker volume (`wellbeing-data`) |
-| **Product Hub** | Server-rendered Jinja2 template + vanilla JS/CSS (DM Sans + Fraunces fonts, glassmorphism aesthetic) |
+| **Product Hub** | Server-rendered Jinja2 template + vanilla JS/CSS |
 | **Extension** | Chrome Manifest V3, ES modules, Chart.js for popup charts |
 | **Infrastructure** | Docker, Docker Compose, GitHub Actions (lint, test, CodeQL, Docker build, release) |
 
@@ -139,9 +145,11 @@ For local development commands, formatting, and backend test workflow, see [DEVE
 
 ## Model Details
 
-Fine-tuned RoBERTa hosted on Hugging Face: [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
+Fine-tuned RoBERTa: [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
 
-Quantized ONNX runtime artifact used by the app: [ekam28/emotion-detector-onnx](https://huggingface.co/ekam28/emotion-detector-onnx)
+Quantized ONNX artifact: [ekam28/emotion-detector-onnx](https://huggingface.co/ekam28/emotion-detector-onnx)
+
+Cloud API (HF Space): [ekam28/emotion-detector-api](https://huggingface.co/spaces/ekam28/emotion-detector-api)
 
 | Label | Condition |
 |:------|:----------|
@@ -153,8 +161,6 @@ Quantized ONNX runtime artifact used by the app: [ekam28/emotion-detector-onnx](
 | `LABEL_5` | PTSD |
 | `LABEL_6` | Normal |
 
-The production build uses a **quantized ONNX** model for fast CPU inference without PyTorch:
-
 ```
 Original (FP32):  ~499 MB
 Quantized (INT8): ~125 MB  (75% reduction)
@@ -163,6 +169,16 @@ Quantized (INT8): ~125 MB  (75% reduction)
 ---
 
 ## API Reference
+
+### Cloud API (HF Space)
+
+| Method | Endpoint | Purpose |
+|:-------|:---------|:--------|
+| `POST` | `/predict` | Classify a single text |
+| `POST` | `/batch` | Classify an array of texts |
+| `GET`  | `/health` | Health check with model status |
+
+### Local API (Docker Backend)
 
 | Method | Endpoint | Purpose |
 |:-------|:---------|:--------|
@@ -192,41 +208,42 @@ Detection-of-Mental-Disorders-Extension/
 │   │   │   └── index.html       # Web hub Jinja2 template
 │   │   └── static/
 │   │       ├── app.js           # Hub client-side logic
-│   │       └── app.css          # Hub styles (glassmorphism, DM Sans)
-│   ├── tests/                   # pytest suite (analyze, health, config, product)
-│   ├── bootstrap_model.py       # Downloads the ONNX runtime model if it is missing
-│   ├── Dockerfile               # Production image (python:3.10-slim)
-│   ├── requirements.txt         # Runtime deps (Flask, ONNX, transformers)
-│   ├── requirements-dev.txt     # Dev deps (pytest, black, flake8)
+│   │       └── app.css          # Hub styles
+│   ├── tests/                   # pytest suite
+│   ├── bootstrap_model.py       # Downloads ONNX model if missing
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── requirements-dev.txt
 │   └── wsgi.py                  # Gunicorn entry point
 ├── extension/
 │   ├── manifest.json            # Manifest V3 definition
-│   ├── background.js            # Service worker: session tracking, event sync
+│   ├── background.js            # Service worker: session tracking, event sync, mode-aware
 │   ├── page-monitor.js          # Content script: auto-analysis, shielding, nudges, drafts
 │   ├── content.js               # Injected script: comment extraction (YouTube/Reddit/X)
-│   ├── config.js                # Shared constants and thresholds
-│   ├── popup.html               # Extension popup UI
+│   ├── config.js                # Shared constants, thresholds, and dual-mode config
+│   ├── popup.html               # Extension popup UI (3 tabs: Dashboard, Thread, Settings)
 │   ├── styles.css               # Popup styles
 │   ├── content.css              # In-page shield/nudge/support styles
 │   ├── js/
-│   │   ├── main.js              # Popup entry: bind views, settings, analyze button
-│   │   ├── analysis.js          # Risk scoring and summary (mirrors backend wellbeing.py)
-│   │   ├── api.js               # /api/analyze client (single + batch)
-│   │   ├── backend-api.js       # /api/settings, /api/dashboard, /api/events client
+│   │   ├── main.js              # Popup entry: views, settings, mode toggle, analyze
+│   │   ├── mode.js              # Inference mode manager (cloud/local, health check)
+│   │   ├── analysis.js          # Risk scoring and summary
+│   │   ├── api.js               # Dual-endpoint inference (cloud HF Space / local Docker)
+│   │   ├── backend-api.js       # Local-only: settings, dashboard, events (no-op in cloud)
 │   │   ├── chart.js             # Chart.js wrapper for popup charts
-│   │   ├── comments.js          # Extract + batch-analyze orchestration
+│   │   ├── comments.js          # Extract + batch-analyze with incremental caching
 │   │   ├── shield.js            # Shield mode toggle helpers
 │   │   ├── state.js             # In-memory popup state (results, batch cursor)
 │   │   ├── ui.js                # Popup DOM rendering
-│   │   └── wellbeing-storage.js # Settings sync (backend → chrome.storage fallback)
+│   │   └── wellbeing-storage.js # Settings sync (backend or chrome.storage by mode)
 │   └── libs/
 │       └── chart.umd.min.js     # Bundled Chart.js
-├── docker-compose.yml           # Single service + named volume
+├── docker-compose.yml           # Local backend stack + named volume
 ├── Makefile                     # Dev shortcuts (lint, test, format, docker)
 ├── pyproject.toml               # Black + pytest config
 ├── .github/workflows/           # CI: lint, test, CodeQL, Docker build, release
 ├── DEVELOPMENT.md               # Developer setup guide
-└── README.md                    # ← You are here
+└── README.md
 ```
 
 ---
@@ -235,13 +252,13 @@ Detection-of-Mental-Disorders-Extension/
 
 | Problem | Fix |
 |:--------|:----|
-| **Docker build fails on Apple Silicon** | The compose file defaults `DOCKER_PLATFORM` to `linux/arm64`. Override it with `DOCKER_PLATFORM=linux/amd64 docker compose up --build` on Intel Macs or Linux. |
-| **Extension won't connect to backend** | Ensure Docker is running and `curl http://localhost:8000/health` returns `"status": "ok"`. |
-| **Do I need to export or quantize the model first?** | No. Docker and the backend bootstrap script download the quantized runtime model automatically if it is missing. |
-| **Comments not detected on Reddit** | Reddit frequently changes its DOM. If selectors stop working, check `page-monitor.js` and `content.js` for the selector arrays. |
-| **High CPU / lag** | The Dockerfile limits Gunicorn to 1 worker, 2 threads, and ONNX to 2 intra-op threads. If your machine is still lagging, lower `OMP_NUM_THREADS` in the Dockerfile. |
+| **Extension shows "Backend not detected" in Local mode** | Ensure Docker is running and `curl http://localhost:8000/health` returns `"status": "ok"`. |
+| **Cloud mode times out** | HF Spaces on free tier sleep after 15 min of inactivity. The first request wakes it up (10--60s). Try again after a moment. |
+| **Docker build fails on Apple Silicon** | The compose file defaults `DOCKER_PLATFORM` to `linux/arm64`. Override with `DOCKER_PLATFORM=linux/amd64 docker compose up --build` on Intel Macs or Linux. |
+| **Comments not detected on Reddit** | Reddit frequently changes its DOM. Check `page-monitor.js` and `content.js` for selector arrays. |
+| **High CPU / lag** | The Dockerfile limits Gunicorn to 1 worker, 2 threads, and ONNX to 2 intra-op threads. Lower `OMP_NUM_THREADS` in the Dockerfile if needed. |
 
-For developer-oriented troubleshooting and command references, use [DEVELOPMENT.md](/Users/ekambitt/Projects/Detection-of-Mental-Disorders-Extension/DEVELOPMENT.md).
+For developer-oriented troubleshooting, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ---
 

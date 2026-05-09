@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
   <head>
+    <meta charset="UTF-8" />
     <title>Mental Wellbeing Guard</title>
     <script src="libs/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
@@ -28,6 +29,7 @@
       <button class="view-switch-btn" data-view-toggle="analysis">
         Current Thread
       </button>
+      <button class="view-switch-btn" data-view-toggle="settings">Settings</button>
     </nav>
 
     <section id="dashboardView">
@@ -50,7 +52,14 @@
         </article>
       </div>
 
-      <div class="dashboard-link-row">
+      <div class="cloud-mode-banner hidden" id="cloudModeBanner">
+        <div class="cloud-banner-text">
+          <strong>Cloud Mode Active</strong>
+          <p>Dashboard and trend tracking require Local mode with Docker.</p>
+        </div>
+      </div>
+
+      <div class="dashboard-link-row" id="dashboardLinkRow">
         <button class="link-button" id="openHub">Open Full Hub</button>
       </div>
 
@@ -93,63 +102,6 @@
           </div>
           <div class="trend-chart">
             <canvas id="weeklyTrendChart"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Safety Net</h2>
-            <p>These controls apply live on supported sites.</p>
-          </div>
-        </div>
-        <div class="panel-body settings-grid">
-          <div class="setting-card">
-            <div>
-              <h3>Shield Mode</h3>
-              <p>Hide comments when their distress score crosses your threshold.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="shieldMode" />
-              <span class="switch-track"></span>
-            </label>
-          </div>
-
-          <div class="setting-card full-width">
-            <div>
-              <h3>Shield Threshold</h3>
-              <p>Higher values only hide the most intense comments.</p>
-            </div>
-            <label class="range-label" for="thresholdSlider">
-              Trigger above <span id="thresholdValue">62%</span>
-            </label>
-            <input type="range" id="thresholdSlider" min="35" max="95" value="62" />
-          </div>
-
-          <div class="setting-card">
-            <div>
-              <h3>Smart Nudges</h3>
-              <p>Prompt a breather when a thread starts looking like a rabbit hole.</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="nudgesToggle" />
-              <span class="switch-track"></span>
-            </label>
-          </div>
-
-          <div class="setting-card">
-            <div>
-              <h3>Support Prompts</h3>
-              <p>
-                Inject local support resources when high-risk draft language is
-                detected.
-              </p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="resourceToggle" />
-              <span class="switch-track"></span>
-            </label>
           </div>
         </div>
       </section>
@@ -246,6 +198,115 @@
       </div>
 
       <div id="commentsContainer" class="comments-container"></div>
+    </section>
+
+    <section id="settingsView" class="hidden">
+      <section class="panel" id="modeToggleSection">
+        <div class="panel-head">
+          <div>
+            <h2>Inference Mode</h2>
+            <p>Choose how comment analysis is processed.</p>
+          </div>
+          <span class="mode-status-badge" id="modeStatusBadge">Cloud</span>
+        </div>
+        <div class="panel-body">
+          <div class="mode-options">
+            <label class="mode-option active" id="modeOptionCloud">
+              <input type="radio" name="inferenceMode" value="cloud" checked />
+              <div class="mode-option-content">
+                <span class="mode-option-title"
+                  >Cloud <span class="mode-rec">(Recommended)</span></span
+                >
+                <span class="mode-option-desc">Fast setup, no downloads required</span>
+                <span class="mode-option-status" id="cloudStatus">API Online</span>
+              </div>
+            </label>
+            <label class="mode-option" id="modeOptionLocal">
+              <input type="radio" name="inferenceMode" value="local" />
+              <div class="mode-option-content">
+                <span class="mode-option-title"
+                  >Local <span class="mode-rec">(Private &amp; Offline)</span></span
+                >
+                <span class="mode-option-desc"
+                  >Requires Docker, enables dashboard &amp; history</span
+                >
+                <span class="mode-option-status" id="localStatus">Checking...</span>
+              </div>
+            </label>
+          </div>
+          <div class="local-setup-guide hidden" id="localSetupGuide">
+            <p><strong>Local backend not detected.</strong> To set up:</p>
+            <ol>
+              <li>
+                Install
+                <a href="https://www.docker.com/products/docker-desktop" target="_blank"
+                  >Docker Desktop</a
+                >
+              </li>
+              <li>Clone the repo and run: <code>docker compose up</code></li>
+              <li>Wait for the model to download (~500 MB first time)</li>
+            </ol>
+            <button class="retry-btn" id="retryLocalCheck">Retry Connection</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="safetyNetPanel">
+        <div class="panel-head">
+          <div>
+            <h2>Safety Controls</h2>
+            <p>These controls apply live on supported sites.</p>
+          </div>
+        </div>
+        <div class="panel-body settings-grid">
+          <div class="setting-card">
+            <div>
+              <h3>Shield Mode</h3>
+              <p>Hide comments when their distress score crosses your threshold.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="shieldMode" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-card full-width">
+            <div>
+              <h3>Shield Threshold</h3>
+              <p>Higher values only hide the most intense comments.</p>
+            </div>
+            <label class="range-label" for="thresholdSlider">
+              Trigger above <span id="thresholdValue">62%</span>
+            </label>
+            <input type="range" id="thresholdSlider" min="35" max="95" value="62" />
+          </div>
+
+          <div class="setting-card">
+            <div>
+              <h3>Smart Nudges</h3>
+              <p>Prompt a breather when a thread starts looking like a rabbit hole.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="nudgesToggle" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
+
+          <div class="setting-card">
+            <div>
+              <h3>Support Prompts</h3>
+              <p>
+                Inject local support resources when high-risk draft language is
+                detected.
+              </p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="resourceToggle" />
+              <span class="switch-track"></span>
+            </label>
+          </div>
+        </div>
+      </section>
     </section>
 
     <script type="module" src="js/main.js"></script>

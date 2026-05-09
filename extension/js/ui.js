@@ -1,7 +1,6 @@
 import { LABELS, LABEL_ORDER } from '../config.js';
 import { describeRisk } from './analysis.js';
 import { renderSentimentChart, renderTrendChart } from './chart.js';
-import { isShielded } from './shield.js';
 
 const element = (selector) => document.querySelector(selector);
 const elements = (selector) => Array.from(document.querySelectorAll(selector));
@@ -13,6 +12,7 @@ export function setActiveView(view) {
 
   element('#dashboardView')?.classList.toggle('hidden', view !== 'dashboard');
   element('#analysisView')?.classList.toggle('hidden', view !== 'analysis');
+  element('#settingsView')?.classList.toggle('hidden', view !== 'settings');
 }
 
 export function showAnalysisLoader(text) {
@@ -105,18 +105,18 @@ export function syncSettings(settings) {
   if (resourceToggle) resourceToggle.checked = settings.resourcePromptsEnabled;
 }
 
-export function renderAnalysis(metrics, topComments, activeFilter, settings) {
+export function renderAnalysis(metrics, topComments, activeFilter) {
   renderPageMetricCards(metrics);
   renderSummary(metrics.summary);
   hideAnalysisLoader();
   renderSentimentChart(metrics.summary);
+  element('#pageChartPanel')?.classList.remove('hidden');
   element('#filterContainer')?.classList.remove('hidden');
   element('#pageSummary')?.classList.remove('hidden');
   displayResults(
     getFilteredResults(metrics.results, activeFilter),
     topComments,
-    activeFilter,
-    settings
+    activeFilter
   );
   setActiveFilter(activeFilter);
 }
@@ -155,7 +155,7 @@ export function renderSummary(summary) {
   });
 }
 
-export function displayResults(results, topComments, filter, settings) {
+export function displayResults(results, topComments, filter) {
   const container = element('#commentsContainer');
   if (!container) return;
 
@@ -169,12 +169,12 @@ export function displayResults(results, topComments, filter, settings) {
 
   const fragment = document.createDocumentFragment();
   results.forEach((result) => {
-    fragment.appendChild(createCommentElement(result, topComments, filter, settings));
+    fragment.appendChild(createCommentElement(result, topComments, filter));
   });
   container.appendChild(fragment);
 }
 
-function createCommentElement(result, topComments, filter, settings) {
+function createCommentElement(result, topComments, filter) {
   const commentDiv = document.createElement('div');
   const topColor = LABELS[result.topPrediction?.label]?.color || '#dbe2ea';
   commentDiv.className = 'comment';
@@ -230,18 +230,6 @@ function createCommentElement(result, topComments, filter, settings) {
   commentDiv.appendChild(header);
   commentDiv.appendChild(commentText);
   commentDiv.appendChild(sentimentBars);
-
-  if (isShielded(result.riskScore, settings)) {
-    commentDiv.classList.add('shielded');
-    commentDiv.title = 'Click to reveal this comment';
-    commentDiv.addEventListener(
-      'click',
-      () => {
-        commentDiv.classList.toggle('revealed');
-      },
-      { once: true }
-    );
-  }
 
   return commentDiv;
 }
