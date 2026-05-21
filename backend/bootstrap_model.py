@@ -44,8 +44,7 @@ def ensure_model() -> Path:
             "tokenizer.json",
             "tokenizer_config.json",
             "special_tokens_map.json",
-            "merges.txt",
-            "vocab.json",
+            "vocab.txt",
         ],
     )
 

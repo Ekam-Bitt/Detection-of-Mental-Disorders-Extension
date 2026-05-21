@@ -66,6 +66,7 @@ backend/app/model_cache/
 backend/model_files/
 backend/onnx_model/
 backend/onnx_model_quantized/
+final_student_model/
 *.bin
 *.pt
 *.pth

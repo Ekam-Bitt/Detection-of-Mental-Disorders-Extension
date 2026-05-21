@@ -9,7 +9,7 @@ services:
     environment:
       - MODEL_PATH=/home/appuser/model-cache/onnx_model_quantized
       - MODEL_REPO_ID=ekam28/emotion-detector-onnx
-      - MODEL_REVISION=fa68a75ca66c2dab45f4d6151323d2d4afe75241
+      - MODEL_REVISION=61f7a78b7c2c00f8eb84a74772f69b036942915d
       - WELLBEING_DB_PATH=/app/data/wellbeing.db
     networks:
       - mental-health-net

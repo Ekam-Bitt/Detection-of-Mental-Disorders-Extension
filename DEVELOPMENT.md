@@ -200,7 +200,7 @@ This repo no longer includes a committed `pre-commit` hook setup. Use `make lint
 |:---------|:--------|:------------|
 | `MODEL_PATH` | `onnx_model_quantized` | Path where the quantized ONNX model should exist locally |
 | `MODEL_REPO_ID` | `ekam28/emotion-detector-onnx` | Hugging Face model repo used for automatic runtime downloads |
-| `MODEL_REVISION` | `fa68a75ca66c2dab45f4d6151323d2d4afe75241` | Hugging Face revision used for runtime downloads |
+| `MODEL_REVISION` | `61f7a78b7c2c00f8eb84a74772f69b036942915d` | Hugging Face revision used for runtime downloads |
 | `WELLBEING_DB_PATH` | `backend/data/wellbeing.db` | SQLite database file path |
 | `TOP_K` | `7` | Number of top labels to return per prediction |
 | `LOG_LEVEL` | `INFO` | Python logging level |
@@ -212,7 +212,7 @@ This repo no longer includes a committed `pre-commit` hook setup. Use `make lint
 The `docker-compose.yml` sets:
 - `MODEL_PATH=/home/appuser/model-cache/onnx_model_quantized`
 - `MODEL_REPO_ID=ekam28/emotion-detector-onnx`
-- `MODEL_REVISION=fa68a75ca66c2dab45f4d6151323d2d4afe75241`
+- `MODEL_REVISION=61f7a78b7c2c00f8eb84a74772f69b036942915d`
 - `WELLBEING_DB_PATH=/app/data/wellbeing.db`
 - `DOCKER_PLATFORM=linux/arm64` by default (override with `linux/amd64` on Intel/Linux hosts)
 - Named volume `wellbeing-data` mounted at `/app/data` for persistent SQLite

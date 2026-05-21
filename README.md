@@ -4,7 +4,7 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Ekam-Bitt/Detection-of-Mental-Disorders-Extension/docker-build.yml?label=build)
 ![GitHub License](https://img.shields.io/github/license/Ekam-Bitt/Detection-of-Mental-Disorders-Extension)
 
-A dual-mode wellbeing platform that combines a **Chrome extension**, an optional **web dashboard**, and a **self-analysis tool**. It uses a quantized ONNX RoBERTa model to classify mental health signals in social media comments across YouTube, Reddit, and X (Twitter).
+A dual-mode wellbeing platform that combines a **Chrome extension**, an optional **web dashboard**, and a **self-analysis tool**. It uses a quantized ONNX DistilBERT model (knowledge-distilled from a fine-tuned teacher) to classify mental health signals in social media comments across YouTube, Reddit, and X (Twitter).
 
 **v2.0** introduces **Cloud Mode** (default) for zero-setup usage via Hugging Face Spaces, while **Local Mode** retains the full Docker-based pipeline with dashboard, history tracking, and complete data privacy.
 
@@ -132,7 +132,7 @@ Navigate to **[http://localhost:8000](http://localhost:8000)** for the full dash
 
 | Layer | Technology |
 |:------|:-----------|
-| **ML Model** | RoBERTa fine-tuned on mental health text, distributed as an INT8 ONNX artifact (~120 MB) |
+| **ML Model** | DistilBERT (knowledge-distilled from fine-tuned RoBERTa teacher), distributed as an INT8 ONNX artifact (~64 MB) |
 | **Cloud Inference** | Hugging Face Spaces (Docker SDK, FastAPI, ONNX Runtime) |
 | **Local Inference** | ONNX Runtime (CPU, 2 intra-op threads) -- no PyTorch needed at runtime |
 | **Backend** | Python 3.10, Flask 3.x, Gunicorn (1 worker, 2 threads) |
@@ -145,9 +145,9 @@ Navigate to **[http://localhost:8000](http://localhost:8000)** for the full dash
 
 ## Model Details
 
-Fine-tuned RoBERTa: [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
+Teacher model (fine-tuned RoBERTa): [ekam28/emotion-detector](https://huggingface.co/ekam28/emotion-detector)
 
-Quantized ONNX artifact: [ekam28/emotion-detector-onnx](https://huggingface.co/ekam28/emotion-detector-onnx)
+Student model (quantized DistilBERT ONNX): [ekam28/emotion-detector-onnx](https://huggingface.co/ekam28/emotion-detector-onnx)
 
 Cloud API (HF Space): [ekam28/emotion-detector-api](https://huggingface.co/spaces/ekam28/emotion-detector-api)
 
@@ -162,8 +162,9 @@ Cloud API (HF Space): [ekam28/emotion-detector-api](https://huggingface.co/space
 | `LABEL_6` | Normal |
 
 ```
-Original (FP32):  ~499 MB
-Quantized (INT8): ~125 MB  (75% reduction)
+Teacher (RoBERTa FP32):   ~499 MB
+Student (DistilBERT FP32): ~256 MB
+Quantized (INT8 ONNX):     ~64 MB  (87% reduction from teacher)
 ```
 
 ---
