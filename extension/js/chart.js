@@ -36,17 +36,24 @@ export function renderSentimentChart(summary = {}) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: 16,
+      },
       plugins: {
         legend: {
           position: 'bottom',
+          onClick: null,
           labels: {
-            boxWidth: 10,
+            boxWidth: 8,
             usePointStyle: true,
-            padding: 14,
+            padding: 12,
+            font: {
+              size: 11,
+            },
           },
         },
       },
-      cutout: '62%',
+      cutout: '65%',
     },
   });
 }

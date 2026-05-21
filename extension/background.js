@@ -71,12 +71,19 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'ANALYZE_PAGE_SAMPLE') {
     handleAnalyzePageSample(message.payload, sender)
-      .then((response) => sendResponse({ ok: true, ...response }))
+      .then((response) => {
+        if (sender.tab?.id) {
+          chrome.tabs.sendMessage(sender.tab.id, {
+            type: 'PAGE_SAMPLE_ANALYZED',
+            payload: response,
+          }).catch(() => {});
+        }
+      })
       .catch((error) => {
         console.error('Auto page analysis failed:', error);
-        sendResponse({ ok: false, error: error.message });
       });
-    return true;
+    sendResponse({ ok: true, status: 'processing' });
+    return false; // Replied synchronously
   }
 
   if (message.type === 'MANUAL_ANALYSIS_CAPTURED') {
@@ -330,20 +337,22 @@ function safeHost(url) {
 
 async function getSupportResource({ locale = '', timeZone = '' }) {
   try {
-    return await fetchSupportResource(locale, timeZone);
+    const resource = await fetchSupportResource(locale, timeZone);
+    if (resource) return resource;
   } catch (error) {
     console.error('Failed to fetch support resource from backend:', error);
-    const normalizedLocale = locale.toLowerCase();
-    const normalizedZone = timeZone.toLowerCase();
-
-    if (normalizedLocale.includes('in') || normalizedZone.includes('kolkata')) {
-      return SUPPORT_RESOURCES.india;
-    }
-
-    if (normalizedLocale.includes('us') || normalizedZone.startsWith('america/')) {
-      return SUPPORT_RESOURCES.unitedStates;
-    }
-
-    return SUPPORT_RESOURCES.fallback;
   }
+
+  const normalizedLocale = locale.toLowerCase();
+  const normalizedZone = timeZone.toLowerCase();
+
+  if (normalizedLocale.includes('in') || normalizedZone.includes('kolkata')) {
+    return SUPPORT_RESOURCES.india;
+  }
+
+  if (normalizedLocale.includes('us') || normalizedZone.startsWith('america/')) {
+    return SUPPORT_RESOURCES.unitedStates;
+  }
+
+  return SUPPORT_RESOURCES.fallback;
 }

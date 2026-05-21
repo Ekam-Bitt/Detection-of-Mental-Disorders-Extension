@@ -1,6 +1,36 @@
-import { API_TIMEOUT, CLOUD_API_TIMEOUT } from '../config.js';
+import { API_TIMEOUT, CLOUD_API_TIMEOUT, LABELS } from '../config.js';
 import { getApiBaseUrl } from './backend-api.js';
 import { isCloudMode, getCloudBaseUrl } from './mode.js';
+
+function normalizePredictions(predictions) {
+  const nameToLabelKey = Object.fromEntries(
+    Object.entries(LABELS).map(([key, value]) => [value.name, key])
+  );
+
+  return predictions.map((p) => {
+    let newLabel = p.label;
+    if (nameToLabelKey[p.label]) {
+      newLabel = nameToLabelKey[p.label];
+    }
+    return { ...p, label: newLabel };
+  });
+}
+
+function describeFetchFailure(error, target) {
+  if (error.name === 'AbortError') {
+    return error;
+  }
+
+  if (error instanceof TypeError && /failed to fetch/i.test(error.message)) {
+    const message =
+      target === 'cloud'
+        ? 'Cloud inference service is unreachable. Check your internet connection or try again after the HF Space wakes up.'
+        : 'Local backend is unreachable. Start the Docker backend or switch the extension to Cloud mode.';
+    return new Error(message, { cause: error });
+  }
+
+  return error;
+}
 
 /**
  * Analyze a single text. Returns { text, predictions }.
@@ -70,7 +100,7 @@ async function analyzeBatchCloud(texts) {
 
     return texts.map((text, i) => ({
       text,
-      predictions: results[i] || [],
+      predictions: normalizePredictions(results[i] || []),
     }));
   } catch (error) {
     clearTimeout(timeoutId);
@@ -80,7 +110,7 @@ async function analyzeBatchCloud(texts) {
       return retryCloudBatch(texts);
     }
 
-    throw error;
+    throw describeFetchFailure(error, 'cloud');
   }
 }
 
@@ -116,7 +146,7 @@ async function retryCloudBatch(texts) {
 
     return texts.map((text, i) => ({
       text,
-      predictions: results[i] || [],
+      predictions: normalizePredictions(results[i] || []),
     }));
   } catch (error) {
     clearTimeout(timeoutId);
@@ -127,7 +157,7 @@ async function retryCloudBatch(texts) {
       );
     }
 
-    throw error;
+    throw describeFetchFailure(error, 'cloud');
   }
 }
 
@@ -159,10 +189,11 @@ async function analyzeEmotionLocal(text) {
     const data = await response.json();
     const predictions = data.results?.[0] || [];
 
-    return { text, predictions };
+    return { text, predictions: normalizePredictions(predictions) };
   } catch (error) {
-    console.error('Analysis error:', error);
-    throw error;
+    const normalizedError = describeFetchFailure(error, 'local');
+    console.error('Analysis error:', normalizedError);
+    throw normalizedError;
   }
 }
 
@@ -172,25 +203,31 @@ async function analyzeBatchLocal(texts) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ comments: texts }),
-    signal: controller.signal,
-  });
+  try {
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comments: texts }),
+      signal: controller.signal,
+    });
 
-  clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `API error: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+
+    return texts.map((text, i) => ({
+      text,
+      predictions: normalizePredictions(results[i] || []),
+    }));
+  } catch (error) {
+    throw describeFetchFailure(error, 'local');
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  const results = data.results || [];
-
-  return texts.map((text, i) => ({
-    text,
-    predictions: results[i] || [],
-  }));
 }

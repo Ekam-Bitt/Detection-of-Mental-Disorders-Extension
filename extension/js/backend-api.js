@@ -6,6 +6,28 @@ export async function getApiBaseUrl() {
   return (storageResult.apiBaseUrl || DEFAULT_API_BASE_URL).replace(/\/$/, '');
 }
 
+function describeBackendFetchFailure(error) {
+  if (error.name === 'AbortError') {
+    return new Error(
+      'Local backend request timed out. Check that the backend is running and responsive.',
+      {
+        cause: error,
+      }
+    );
+  }
+
+  if (error instanceof TypeError && /failed to fetch/i.test(error.message)) {
+    return new Error(
+      'Local backend is unreachable. Start the Docker backend or switch the extension to Cloud mode.',
+      {
+        cause: error,
+      }
+    );
+  }
+
+  return error;
+}
+
 async function fetchJson(path, options = {}) {
   const baseUrl = await getApiBaseUrl();
   const controller = new AbortController();
@@ -27,6 +49,8 @@ async function fetchJson(path, options = {}) {
     }
 
     return response.json();
+  } catch (error) {
+    throw describeBackendFetchFailure(error);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -103,7 +127,7 @@ export async function postEvent(event) {
 
 export async function getSupportResource(locale, timeZone) {
   if (await isCloudMode()) {
-    throw new Error('Cloud mode — use local fallback');
+    return null;
   }
 
   const query = new URLSearchParams({

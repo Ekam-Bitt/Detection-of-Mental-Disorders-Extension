@@ -56,30 +56,46 @@
     lastFingerprint: '',
     analysisTimer: null,
     draftTimer: null,
+    observer: null,
     supportResource: null,
     latestAnalyses: new Map(),
     pauseUntil: 0,
     nudgeDismissed: false,
+    disabled: false,
   };
 
   const host = window.location.hostname;
   if (!SUPPORTED_DOMAINS.some((domain) => host.includes(domain))) return;
 
-  await initialize();
+  try {
+    await initialize();
+  } catch (error) {
+    if (isRuntimeMessagingError(error)) {
+      disableMonitor('extension context was invalidated');
+      return;
+    }
+    console.warn('Page monitor initialization failed:', getErrorText(error));
+  }
 
   async function initialize() {
+    if (!isRuntimeAvailable()) {
+      disableMonitor('extension runtime is unavailable');
+      return;
+    }
+
     await loadSettings();
     state.supportResource = await getSupportResource();
     injectInteractionHooks();
     scheduleAnalysis();
     attachDraftListeners();
 
-    const observer = new MutationObserver(() => {
+    state.observer = new MutationObserver(() => {
+      if (state.disabled) return;
       attachDraftListeners();
       scheduleAnalysis();
     });
 
-    observer.observe(document.body, {
+    state.observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
@@ -88,21 +104,47 @@
       if (!document.hidden) scheduleAnalysis(true);
     });
 
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== 'local' || !changes[SETTINGS_KEY]) return;
-      state.settings = {
-        ...DEFAULT_SETTINGS,
-        ...(changes[SETTINGS_KEY].newValue || {}),
-      };
-      applyShielding(collectCommentCandidates());
-      if (!state.settings.resourcePromptsEnabled) {
-        hideSupportPrompt();
+    try {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (state.disabled || areaName !== 'local' || !changes[SETTINGS_KEY]) return;
+        state.settings = {
+          ...DEFAULT_SETTINGS,
+          ...(changes[SETTINGS_KEY].newValue || {}),
+        };
+        applyShielding(collectCommentCandidates());
+        if (!state.settings.resourcePromptsEnabled) {
+          hideSupportPrompt();
+        }
+      });
+
+      chrome.runtime.onMessage.addListener((message) => {
+        if (state.disabled || message.type !== 'PAGE_SAMPLE_ANALYZED') return;
+
+        const response = message.payload || {};
+        state.latestAnalyses = new Map(
+          (response.commentAnalyses || []).map((item) => [item.id, item])
+        );
+        applyShielding(collectCommentCandidates());
+
+        if (
+          state.settings.nudgesEnabled &&
+          response.metrics?.rabbitHoleLikely &&
+          !state.nudgeDismissed
+        ) {
+          showNudge(response.metrics);
+        }
+      });
+    } catch (error) {
+      if (isRuntimeMessagingError(error)) {
+        disableMonitor('extension context was invalidated');
+        return;
       }
-    });
+      throw error;
+    }
   }
 
   async function loadSettings() {
-    const result = await chrome.storage.local.get(SETTINGS_KEY);
+    const result = await readLocalStorage(SETTINGS_KEY);
     state.settings = {
       ...DEFAULT_SETTINGS,
       ...(result[SETTINGS_KEY] || {}),
@@ -168,6 +210,7 @@
   }
 
   function scheduleAnalysis(force = false) {
+    if (state.disabled) return;
     window.clearTimeout(state.analysisTimer);
     state.analysisTimer = window.setTimeout(
       () => runAnalysis(force),
@@ -176,7 +219,7 @@
   }
 
   async function runAnalysis(force = false) {
-    if (document.hidden) return;
+    if (state.disabled || document.hidden) return;
 
     const candidates = collectCommentCandidates();
     if (!candidates.length) return;
@@ -192,7 +235,7 @@
     state.lastFingerprint = fingerprint;
 
     try {
-      const response = await chrome.runtime.sendMessage({
+      const response = await sendRuntimeMessage({
         type: 'ANALYZE_PAGE_SAMPLE',
         payload: {
           url: location.href,
@@ -201,22 +244,17 @@
         },
       });
 
-      if (!response?.ok) return;
+      if (state.disabled) return;
 
-      state.latestAnalyses = new Map(
-        response.commentAnalyses.map((item) => [item.id, item])
-      );
-      applyShielding(candidates);
-
-      if (
-        state.settings.nudgesEnabled &&
-        response.metrics?.rabbitHoleLikely &&
-        !state.nudgeDismissed
-      ) {
-        showNudge(response.metrics);
+      if (!response?.ok) {
+        console.warn('Page monitor analysis request was rejected or failed.');
       }
     } catch (error) {
-      console.error('Page monitor analysis failed:', error);
+      if (isRuntimeMessagingError(error)) {
+        disableMonitor('extension context was invalidated');
+        return;
+      }
+      console.warn('Page monitor analysis failed:', getErrorText(error));
     }
   }
 
@@ -390,7 +428,7 @@
 
   async function getSupportResource() {
     try {
-      const response = await chrome.runtime.sendMessage({
+      const response = await sendRuntimeMessage({
         type: 'GET_SUPPORT_RESOURCES',
         payload: {
           locale: navigator.language,
@@ -399,8 +437,80 @@
       });
       return response?.resource || null;
     } catch (error) {
-      console.error('Failed to load support resource:', error);
+      if (isRuntimeMessagingError(error)) {
+        disableMonitor('extension context was invalidated');
+        return null;
+      }
+      console.warn('Failed to load support resource:', getErrorText(error));
       return null;
     }
+  }
+
+  async function readLocalStorage(key) {
+    if (!isRuntimeAvailable()) {
+      disableMonitor('extension runtime is unavailable');
+      return {};
+    }
+
+    try {
+      return await chrome.storage.local.get(key);
+    } catch (error) {
+      if (isRuntimeMessagingError(error)) {
+        disableMonitor('extension context was invalidated');
+        return {};
+      }
+      throw error;
+    }
+  }
+
+  async function sendRuntimeMessage(message) {
+    if (!isRuntimeAvailable()) {
+      disableMonitor('extension runtime is unavailable');
+      return null;
+    }
+
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch (error) {
+      if (isRuntimeMessagingError(error)) {
+        disableMonitor('extension context was invalidated');
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  function isRuntimeAvailable() {
+    try {
+      return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.id);
+    } catch {
+      return false;
+    }
+  }
+
+  function isRuntimeMessagingError(error) {
+    return (
+      !isRuntimeAvailable() ||
+      /extension context invalidated|context invalidated|receiving end does not exist|message port closed|could not establish connection/i.test(
+        getErrorText(error)
+      )
+    );
+  }
+
+  function getErrorText(error) {
+    return [error?.name, error?.message, error?.stack, String(error)]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  function disableMonitor(reason) {
+    if (state.disabled) return;
+    state.disabled = true;
+    window.clearTimeout(state.analysisTimer);
+    window.clearTimeout(state.draftTimer);
+    state.observer?.disconnect();
+    hideSupportPrompt();
+    document.getElementById('mwgNudge')?.remove();
+    console.info(`Mental Wellbeing Guard page monitor stopped: ${reason}.`);
   }
 })();
