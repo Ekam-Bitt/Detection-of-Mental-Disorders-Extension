@@ -129,10 +129,13 @@ async function updateLocalStatus() {
       localStatusEl.className = 'mode-option-status status-offline';
     }
 
-    // Only show setup guide if user is currently in local mode
     const mode = await getMode();
     if (mode === 'local') {
-      setupGuide?.classList.remove('hidden');
+      console.warn('Local backend not available, auto-switching to cloud mode');
+      await setMode('cloud');
+      await syncModeUI('cloud');
+      await refreshDashboard();
+      setupGuide?.classList.add('hidden');
     }
   }
 }
@@ -303,6 +306,14 @@ function rerenderAnalysis() {
 }
 
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName === 'sync' && changes.inferenceMode) {
+    const newMode = changes.inferenceMode.newValue;
+    if (newMode) {
+      await syncModeUI(newMode);
+      await refreshDashboard();
+    }
+  }
+
   if (areaName !== 'local') return;
 
   if (changes.wellbeingSettings) {

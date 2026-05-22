@@ -2,15 +2,25 @@ import { API_TIMEOUT, CLOUD_API_TIMEOUT, LABELS } from '../config.js';
 import { getApiBaseUrl } from './backend-api.js';
 import { isCloudMode, getCloudBaseUrl } from './mode.js';
 
-function normalizePredictions(predictions) {
-  const nameToLabelKey = Object.fromEntries(
-    Object.entries(LABELS).map(([key, value]) => [value.name, key])
-  );
+import { setMode } from './mode.js';
 
+const MODEL_LABEL_MAP = {
+  ADHD: 'LABEL_0',
+  Anxiety: 'LABEL_1',
+  Autism: 'LABEL_2',
+  BPD: 'LABEL_3',
+  Depression: 'LABEL_4',
+  PTSD: 'LABEL_5',
+  Normal: 'LABEL_6',
+};
+
+function normalizePredictions(predictions) {
   return predictions.map((p) => {
     let newLabel = p.label;
-    if (nameToLabelKey[p.label]) {
-      newLabel = nameToLabelKey[p.label];
+    if (MODEL_LABEL_MAP[p.label]) {
+      newLabel = MODEL_LABEL_MAP[p.label];
+    } else if (p.label.startsWith('LABEL_')) {
+      newLabel = p.label;
     }
     return { ...p, label: newLabel };
   });
@@ -36,13 +46,26 @@ function describeFetchFailure(error, target) {
  * Analyze a single text. Returns { text, predictions }.
  */
 export async function analyzeEmotion(text) {
-  const cloud = await isCloudMode();
+  let cloud = await isCloudMode();
 
-  if (cloud) {
-    return analyzeEmotionCloud(text);
+  if (!cloud) {
+    try {
+      return await analyzeEmotionLocal(text);
+    } catch (error) {
+      if (
+        error.message.includes('Local backend is unreachable') ||
+        error.message.includes('timed out')
+      ) {
+        console.warn('Local backend unreachable, auto-switching to cloud mode');
+        await setMode('cloud');
+        cloud = true;
+      } else {
+        throw error;
+      }
+    }
   }
 
-  return analyzeEmotionLocal(text);
+  return analyzeEmotionCloud(text);
 }
 
 /**
@@ -52,13 +75,26 @@ export async function analyzeEmotion(text) {
  * Routes to cloud or local based on the current inference mode.
  */
 export async function analyzeBatch(texts) {
-  const cloud = await isCloudMode();
+  let cloud = await isCloudMode();
 
-  if (cloud) {
-    return analyzeBatchCloud(texts);
+  if (!cloud) {
+    try {
+      return await analyzeBatchLocal(texts);
+    } catch (error) {
+      if (
+        error.message.includes('Local backend is unreachable') ||
+        error.message.includes('timed out')
+      ) {
+        console.warn('Local backend unreachable, auto-switching to cloud mode');
+        await setMode('cloud');
+        cloud = true;
+      } else {
+        throw error;
+      }
+    }
   }
 
-  return analyzeBatchLocal(texts);
+  return analyzeBatchCloud(texts);
 }
 
 // ---------------------------------------------------------------------------

@@ -73,10 +73,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleAnalyzePageSample(message.payload, sender)
       .then((response) => {
         if (sender.tab?.id) {
-          chrome.tabs.sendMessage(sender.tab.id, {
-            type: 'PAGE_SAMPLE_ANALYZED',
-            payload: response,
-          }).catch(() => {});
+          chrome.tabs
+            .sendMessage(sender.tab.id, {
+              type: 'PAGE_SAMPLE_ANALYZED',
+              payload: response,
+            })
+            .catch(() => {});
         }
       })
       .catch((error) => {

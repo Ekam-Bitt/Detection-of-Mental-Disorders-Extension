@@ -27,16 +27,7 @@ def load_pipeline(config) -> any:
             providers=["CPUExecutionProvider"],
         )
 
-        # Read label mapping from config.json
-        import json
-        from pathlib import Path
-
-        config_file = Path(model_path) / "config.json"
-        id2label = {}
-        if config_file.exists():
-            with open(config_file) as f:
-                model_config = json.load(f)
-                id2label = model_config.get("id2label", {})
+        # We use explicit LABEL_X mappings so UI configurations control display names.
 
         logger.info(f"ONNX model loaded from: {model_path}")
 
@@ -60,7 +51,7 @@ def load_pipeline(config) -> any:
             for row in probs:
                 labels = []
                 for idx, score in enumerate(row):
-                    label = id2label.get(str(idx), f"LABEL_{idx}")
+                    label = f"LABEL_{idx}"
                     labels.append({"label": label, "score": float(score)})
                 labels.sort(key=lambda x: x["score"], reverse=True)
                 results.append(labels)

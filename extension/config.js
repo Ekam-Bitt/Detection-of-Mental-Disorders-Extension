@@ -57,13 +57,13 @@ export const DEFAULT_WELLBEING_SETTINGS = {
 };
 
 export const LABELS = {
-  LABEL_0: { name: 'ADHD', color: '#38bdf8' },
-  LABEL_1: { name: 'Anxiety', color: '#fb923c' },
-  LABEL_2: { name: 'Autism', color: '#facc15' },
-  LABEL_3: { name: 'BPD', color: '#f472b6' },
-  LABEL_4: { name: 'Depression', color: '#8b5cf6' },
-  LABEL_5: { name: 'PTSD', color: '#ef4444' },
-  LABEL_6: { name: 'Normal', color: '#22c55e' },
+  LABEL_0: { name: 'Attention Patterns', color: '#38bdf8' },
+  LABEL_1: { name: 'Anxiety Patterns', color: '#fb923c' },
+  LABEL_2: { name: 'Neurodivergent Patterns', color: '#facc15' },
+  LABEL_3: { name: 'Volatility Patterns', color: '#f472b6' },
+  LABEL_4: { name: 'Depressive Patterns', color: '#8b5cf6' },
+  LABEL_5: { name: 'Trauma Patterns', color: '#ef4444' },
+  LABEL_6: { name: 'Baseline Patterns', color: '#22c55e' },
 };
 
 export const LABEL_ORDER = [
